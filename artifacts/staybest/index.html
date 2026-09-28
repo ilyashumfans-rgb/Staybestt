@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+    <title>StayBest | Book Hotels, Resorts, Villas & Holiday Stays</title>
+    <meta name="description" content="Discover and book hotels, resorts, villas, and holiday stays with StayBest. Find comfortable properties, great prices, and memorable stays across top destinations." />
+    <meta name="keywords" content="StayBest, hotel booking, resorts, villas, holiday stays, accommodation, travel" />
+    <meta name="robots" content="index, follow" />
+    <meta property="og:title" content="StayBest | Hotels, Resorts & Holiday Stays" />
+    <meta property="og:description" content="Discover and book hotels, resorts, villas, and holiday stays with StayBest." />
+    <meta property="og:type" content="website" />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="StayBest | Hotels, Resorts & Holiday Stays" />
+    <meta name="twitter:description" content="Discover and book hotels, resorts, villas, and holiday stays with StayBest." />
+    <!--
+      The mobile capability is a URL fragment, but even a fragment should not
+      remain in browser history while the app bundle and its providers boot.
+      Keep this tiny route guard before any module or third-party resource.
+      The non-enumerable handoff is consumed and deleted by the hosted page
+      module before Razorpay Checkout is ever loaded.
+    -->
+    <script>
+      (() => {
+        const pathname = window.location.pathname.replace(/\/+$/, "") || "/";
+        if (pathname !== "/mobile-payment" && !pathname.endsWith("/mobile-payment")) return;
+
+        const token = new URLSearchParams(window.location.hash.slice(1)).get("token")?.trim() || "";
+        window.history.replaceState(null, document.title, pathname);
+        if (!token || token.length > 512) return;
+
+        Object.defineProperty(window, "__mobileCheckoutCapability", {
+          configurable: true,
+          enumerable: false,
+          value: token,
+          writable: false,
+        });
+      })();
+    </script>
+    <link rel="icon" type="image/png" href="/staybest-brand-tagline-1789131885718.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

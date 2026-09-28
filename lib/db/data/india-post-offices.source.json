@@ -1,0 +1,17 @@
+{
+  "slug": "dropdevrahul-pincodes-india-2024-05",
+  "name": "All India Pincode Directory snapshot (office level)",
+  "sourceUrl": "https://github.com/dropdevrahul/pincodes-india/blob/main/pincode.csv",
+  "downloadUrl": "https://raw.githubusercontent.com/dropdevrahul/pincodes-india/main/pincode.csv",
+  "sourceLicense": "MIT (repository); source data is attributed by the repository README to the Government of India data.gov.in All India Pincode Directory resource",
+  "officialResourceUrl": "https://data.gov.in/resource/all-india-pincode-directory-till-last-month",
+  "datasetDate": null,
+  "sourceRevisionDate": "2024-05-05",
+  "retrievedAt": "2026-09-11T11:03:05Z",
+  "sha256": "84af12fa29adddedfa9addcf46546000d89d2e2899b2993dc88050fafc8861e2",
+  "rowCount": 157126,
+  "statesOrUnionTerritories": 36,
+  "districts": 732,
+  "pincodes": 19300,
+  "notes": "The publisher does not state an as-of date for the rows. The source revision date above is the CSV commit date, not an inferred postal-office effective date. This snapshot includes CircleName, RegionName, DivisionName, OfficeName, Pincode, OfficeType, Delivery, District, StateName, Latitude and Longitude. It does not include city or taluk; cityOrTaluk therefore remains null until an administrator confirms a label. The 39 duplicate identifying tuples in this snapshot are retained as distinct source rows; sourceKey hashes the complete source row and its deterministic duplicate occurrence ordinal."
+}

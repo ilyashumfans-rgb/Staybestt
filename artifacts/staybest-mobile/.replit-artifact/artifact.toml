@@ -1,0 +1,24 @@
+kind = "mobile"
+previewPath = "/mobile/"
+title = "StayBest Mobile"
+description = "The StayBest customer booking app for mobile: browse and search resorts and hotels across India, view property details and rooms, book stays, manage trips, and save favourites — with StayBest account sign-in."
+version = "1.0.0"
+id = "artifacts/staybest-mobile"
+router = "expo-domain"
+
+[[services]]
+name = "expo"
+ensurePreviewReachable = "/status"
+paths = [ "/mobile/" ]
+localPort = 18532
+
+[services.development]
+run = "pnpm --filter @workspace/staybest-mobile run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/staybest-mobile", "run", "build" ]
+run = [ "pnpm", "--filter", "@workspace/staybest-mobile", "run", "serve" ]
+
+[services.env]
+PORT = "18532"
+BASE_PATH = "/mobile/"

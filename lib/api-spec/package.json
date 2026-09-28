@@ -1,0 +1,11 @@
+{
+  "name": "@workspace/api-spec",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "codegen": "orval --config ./orval.config.ts && sed -i \"s|from 'zod'|from 'zod/v4'|\" ../api-zod/src/generated/api.ts && sed -i '/generated\\/types/d' ../api-zod/src/index.ts && node -e \"const fs=require('node:fs');for(const p of ['../api-zod/src/generated/api.ts','../api-client-react/src/generated/api.ts','../api-client-react/src/generated/api.schemas.ts'])fs.writeFileSync(p,fs.readFileSync(p,'utf8').trimEnd()+'\\\\n')\" && pnpm -w run typecheck:libs"
+  },
+  "devDependencies": {
+    "orval": "^8.23.0"
+  }
+}

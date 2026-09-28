@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "StayBest"
+description = "StayBest — a resort & hotel booking platform. Customers can search properties by city/area/landmark/name, filter by price/category/rating/amenities, view property details with rooms and reviews, check availability, book rooms with dates and guests, manage bookings and wishlist."
+version = "1.0.0"
+id = "artifacts/staybest"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 21266
+
+[services.development]
+run = "pnpm --filter @workspace/staybest run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/staybest", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/staybest/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "21266"
+BASE_PATH = "/"

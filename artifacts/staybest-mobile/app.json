@@ -1,7 +1,13 @@
 {
   "expo": {
     "name": "StayBest",
-    "slug": "staybest-mobile",
+    "slug": "staybestt",
+    "owner": "launchincs",
+    "extra": {
+      "eas": {
+        "projectId": "3c760351-f641-4688-8170-cb31063c3f3d"
+      }
+    },
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",

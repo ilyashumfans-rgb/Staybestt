@@ -44,7 +44,13 @@
       "expo-web-browser",
       "expo-secure-store",
       "expo-notifications",
-      "expo-video"
+      "expo-video",
+      [
+        "@clerk/expo",
+        {
+          "appleSignIn": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

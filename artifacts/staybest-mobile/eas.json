@@ -6,6 +6,7 @@
     "preview": {
       "distribution": "internal",
       "environment": "preview",
+      "pnpm": "10.26.1",
       "android": {
         "buildType": "apk"
       },
@@ -15,6 +16,7 @@
     },
     "production": {
       "environment": "production",
+      "pnpm": "10.26.1",
       "android": {
         "buildType": "app-bundle"
       },

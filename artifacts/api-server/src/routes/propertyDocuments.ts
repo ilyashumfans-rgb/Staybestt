@@ -1,4 +1,7 @@
 import { randomUUID } from "node:crypto";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { Transform } from "node:stream";
 import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
 import type { File } from "@google-cloud/storage";
@@ -9,17 +12,21 @@ import {
   eq,
   inArray,
   ilike,
+  isNull,
   lte,
   or,
   sql,
 } from "drizzle-orm";
 import {
   db,
+  agentAgreementDocumentsTable,
+  partnerProfilesTable,
   propertiesTable,
   propertyDocumentsTable,
   propertyDocumentUploadGrantsTable,
   propertyDocumentUploadIntentsTable,
   usersTable,
+  type User,
 } from "@workspace/db";
 import * as z from "@workspace/api-zod";
 import { resolveUser } from "../lib/auth";
@@ -27,6 +34,7 @@ import { hasAdminToken } from "./admin";
 import { ObjectNotFoundError, ObjectStorageService } from "../lib/objectStorage";
 import sharp from "sharp";
 import { PDFDict, PDFDocument, PDFName } from "pdf-lib";
+import fontkit from "@pdf-lib/fontkit";
 
 const router: IRouter = Router();
 const storage = new ObjectStorageService();
@@ -90,6 +98,58 @@ async function requirePropertyDocumentAdmin(
   }
   req.currentUser = user;
   next();
+}
+
+async function requirePartner(req: Request, res: Response, next: NextFunction): Promise<void> {
+  const user = await resolveUser(req);
+  if (!user) { res.status(401).json({ message: "Sign in required" }); return; }
+  if (user.role !== "partner" || user.status !== "active" || user.approvalStatus !== "approved") {
+    res.status(403).json({ message: "Active partner access required" }); return;
+  }
+  req.currentUser = user;
+  next();
+}
+
+async function requireAgent(req: Request, res: Response, next: NextFunction): Promise<void> {
+  const user = await resolveUser(req);
+  if (!user) { res.status(401).json({ message: "Sign in required" }); return; }
+  // New agents can complete their account-level agreement while awaiting
+  // approval; rejected and blocked identities cannot read or upload.
+  if (user.role !== "agent" || user.status !== "active" ||
+      !["approved", "pending"].includes(user.approvalStatus)) {
+    res.status(403).json({ message: "Active agent registration required" }); return;
+  }
+  req.currentUser = user;
+  next();
+}
+
+async function ownAgentProperty(req: Request, propertyId: number): Promise<typeof propertiesTable.$inferSelect | null> {
+  if (!Number.isSafeInteger(propertyId) || propertyId <= 0) return null;
+  const [property] = await db.select().from(propertiesTable).where(and(
+    eq(propertiesTable.id, propertyId),
+    eq(propertiesTable.ownerId, req.currentUser!.id),
+  )).limit(1);
+  return property && property.status !== "rejected" ? property : null;
+}
+
+async function ownPartnerProperty(req: Request, propertyId: number): Promise<typeof propertiesTable.$inferSelect | null> {
+  if (!Number.isSafeInteger(propertyId) || propertyId <= 0) return null;
+  const [property] = await db.select().from(propertiesTable).where(and(
+    eq(propertiesTable.id, propertyId),
+    eq(propertiesTable.ownerId, req.currentUser!.id),
+  )).limit(1);
+  return property && property.status !== "rejected" ? property : null;
+}
+
+async function partnerIntentProperty(req: Request): Promise<number | null> {
+  const id = String(req.params.intentId ?? "");
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
+  const [intent] = await db.select().from(propertyDocumentUploadIntentsTable).where(and(
+    eq(propertyDocumentUploadIntentsTable.id, id),
+    eq(propertyDocumentUploadIntentsTable.requestedBy, req.currentUser!.id),
+  )).limit(1);
+  if (!intent || !await ownPartnerProperty(req, intent.propertyId)) return null;
+  return intent.propertyId;
 }
 
 async function hasActiveUploadGrant(userId: string): Promise<boolean> {
@@ -257,7 +317,7 @@ async function listDocuments(req: Request, res: Response, admin: boolean): Promi
   );
 }
 
-async function createUploadIntent(req: Request, res: Response, admin: boolean): Promise<void> {
+async function createUploadIntent(req: Request, res: Response, admin: boolean, partner = false): Promise<void> {
   await cleanupExpiredPropertyDocumentStaging();
   const parsed = (admin
     ? z.CreateAdminPropertyDocumentUploadIntentBody
@@ -268,6 +328,10 @@ async function createUploadIntent(req: Request, res: Response, admin: boolean): 
     return;
   }
   const { propertyId, originalName, originalBytes, contentType } = parsed.data;
+  if (partner && (contentType !== "application/pdf" || !/^signed-hotel-agreement-[0-9]+\.pdf$/i.test(originalName))) {
+    res.status(400).json({ message: "Upload the signed hotel agreement as a PDF" });
+    return;
+  }
   const cleanName = originalName.trim();
   if (!cleanName) {
     res.status(400).json({ message: "A document filename is required" });
@@ -278,6 +342,10 @@ async function createUploadIntent(req: Request, res: Response, admin: boolean): 
   });
   if (!property || property.status === "rejected") {
     res.status(404).json({ message: "Property not found" });
+    return;
+  }
+  if (partner && !await ownPartnerProperty(req, propertyId)) {
+    res.status(403).json({ message: "Only your own property documents can be uploaded" });
     return;
   }
   const actor = await actorId(req);
@@ -295,7 +363,7 @@ async function createUploadIntent(req: Request, res: Response, admin: boolean): 
     expiresAt,
   });
   try {
-    const uploadUrl = propertyDocumentUploadURL(req, intentId, admin);
+    const uploadUrl = propertyDocumentUploadURL(req, intentId, admin, partner);
     const payload = {
       intentId,
       uploadUrl,
@@ -321,11 +389,13 @@ async function createUploadIntent(req: Request, res: Response, admin: boolean): 
   }
 }
 
-function propertyDocumentUploadURL(req: Request, intentId: string, admin: boolean): string {
+function propertyDocumentUploadURL(req: Request, intentId: string, admin: boolean, partner = false): string {
   const protocol = (req.get("x-forwarded-proto")?.split(",")[0] ?? req.protocol).trim();
   const host = req.get("host");
   if (!host) throw new Error("Request host is unavailable");
-  const path = admin
+  const path = partner
+    ? `/api/partner/property-documents/upload-intents/${intentId}/content`
+    : admin
     ? `/api/admin/property-documents/upload-intents/${intentId}/content`
     : `/api/employee/property-documents/upload-intents/${intentId}/content`;
   return `${protocol}://${host}${path}`;
@@ -448,9 +518,19 @@ export async function optimizeDocument(
         );
       }
       if (hasPdfSignature(pdf)) {
-        throw new PropertyDocumentValidationError(
-          "Signed PDFs are not supported; upload an unsigned PDF",
-        );
+        // Rewriting bytes invalidates a cryptographic PDF signature. Keep its
+        // original signed bytes after bounded parsing, but never serve active
+        // PDF features to reviewers. Admin still verifies the signature.
+        for (const [, object] of pdf.context.enumerateIndirectObjects()) {
+          if (!(object instanceof PDFDict)) continue;
+          for (const key of ["JavaScript", "JS", "Launch", "EmbeddedFiles", "EmbeddedFile",
+            "OpenAction", "AA", "RichMedia", "XFA", "3D", "GoToR", "SubmitForm", "ImportData"]) {
+            if (object.has(PDFName.of(key))) {
+              throw new PropertyDocumentValidationError("Signed PDF contains unsupported active content");
+            }
+          }
+        }
+        return contents;
       }
       const optimized = Buffer.from(
         await withTimeout(
@@ -871,16 +951,16 @@ async function downloadDocument(req: Request, res: Response, admin: boolean): Pr
   res.setHeader("Cache-Control", "private, no-store");
   res.setHeader("Content-Disposition", `attachment; filename="${safeName}"`);
   res.setHeader("X-Content-Type-Options", "nosniff");
-  const stream = createBoundedDownloadStream(
-    pinnedFile.createReadStream(),
-    MAX_BYTES,
-    metadataBytes,
-  );
+  const source = pinnedFile.createReadStream();
+  const stream = createBoundedDownloadStream(source, MAX_BYTES, metadataBytes);
   stream.on("error", (error) => {
     req.log.error({ err: error, documentId: row.document.id }, "Property document stream failed");
     if (!res.headersSent) res.status(500).json({ message: "Failed to download document" });
     else res.destroy(error);
   });
+  // The bounded transform must consume the pinned storage stream. Piping the
+  // transform alone leaves the response open forever without emitting bytes.
+  source.pipe(stream);
   stream.pipe(res);
 }
 
@@ -1082,5 +1162,404 @@ router.post("/employee/property-documents/upload-intents/:intentId/finalize", re
 router.get("/employee/property-documents/:documentId/download", requireActiveEmployeeUploader, (req, res) =>
   downloadDocument(req, res, false),
 );
+
+router.get("/partner/property-documents", requirePartner, async (req, res) => {
+  const propertyId = Number(req.query.propertyId);
+  const property = await ownPartnerProperty(req, propertyId);
+  if (!property) { res.status(404).json({ message: "Property not found" }); return; }
+  const rows = await db.select({ document: propertyDocumentsTable, property: propertiesTable, uploader: uploaderAlias })
+    .from(propertyDocumentsTable)
+    .innerJoin(propertiesTable, eq(propertyDocumentsTable.propertyId, propertiesTable.id))
+    .innerJoin(uploaderAlias, eq(propertyDocumentsTable.uploadedBy, uploaderAlias.id))
+    .where(and(eq(propertyDocumentsTable.propertyId, propertyId), eq(propertyDocumentsTable.uploadedBy, req.currentUser!.id)))
+    .orderBy(sql`${propertyDocumentsTable.createdAt} desc`);
+  res.json(rows.map(documentDto));
+});
+
+router.get("/partner/property-documents/:documentId/download", requirePartner, async (req, res) => {
+  const row = await findDocument(String(req.params.documentId));
+  if (!row || row.document.uploadedBy !== req.currentUser!.id || !await ownPartnerProperty(req, row.document.propertyId)) {
+    res.status(404).json({ message: "Document not found" }); return;
+  }
+  await downloadDocument(req, res, true);
+});
+
+router.post("/partner/property-documents/upload-intents", requirePartner, (req, res) =>
+  createUploadIntent(req, res, false, true),
+);
+router.put("/partner/property-documents/upload-intents/:intentId/content", requirePartner, async (req, res) => {
+  if (!await partnerIntentProperty(req)) { res.status(404).json({ message: "Upload intent not found" }); return; }
+  await uploadIntentContent(req, res, false);
+});
+router.post("/partner/property-documents/upload-intents/:intentId/finalize", requirePartner, async (req, res) => {
+  if (!await partnerIntentProperty(req)) { res.status(404).json({ message: "Upload intent not found" }); return; }
+  await finalizeUpload(req, res, false);
+});
+
+router.get("/partner/properties/:propertyId/agreement", requirePartner, async (req, res) => {
+  const property = await ownPartnerProperty(req, Number(req.params.propertyId));
+  if (!property) { res.status(404).json({ message: "Property not found" }); return; }
+  try {
+    const propertyReference = `PM-${String(property.propertyNumber).padStart(4, "0")}`;
+    const bytes = await renderHotelAgreement(propertyReference, req.currentUser!, property);
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="hotel-agreement-${property.propertyNumber}.pdf"`);
+    res.send(bytes);
+  } catch (error) {
+    req.log.error({ err: error }, "Could not generate partner agreement");
+    res.status(500).json({ message: "Agreement PDF is currently unavailable" });
+  }
+});
+
+router.get("/admin/partners/:partnerId/properties/:propertyId/agreement", requirePropertyDocumentAdmin, async (req, res) => {
+  const propertyId = Number(req.params.propertyId);
+  const partnerId = String(req.params.partnerId);
+  if (!Number.isSafeInteger(propertyId) || propertyId <= 0) {
+    res.status(400).json({ message: "Invalid property" }); return;
+  }
+  const [property] = await db.select().from(propertiesTable)
+    .where(and(eq(propertiesTable.id, propertyId), eq(propertiesTable.ownerId, partnerId))).limit(1);
+  const [partner] = await db.select().from(usersTable)
+    .where(and(eq(usersTable.id, partnerId), eq(usersTable.role, "partner"))).limit(1);
+  if (!partner || !property || property.status === "rejected") {
+    res.status(404).json({ message: "Partner property not found" }); return;
+  }
+  try {
+    const bytes = await renderHotelAgreement(`PM-${String(property.propertyNumber).padStart(4, "0")}`, partner, property);
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="hotel-agreement-${property.propertyNumber}.pdf"`);
+    res.setHeader("Cache-Control", "private, no-store");
+    res.send(bytes);
+  } catch (error) {
+    req.log.error({ err: error }, "Could not generate admin partner agreement");
+    res.status(500).json({ message: "Agreement PDF is currently unavailable" });
+  }
+});
+
+// Only the counterparty's party block is filled. The platform's address and
+// contact placeholders (and every other legal clause) remain untouched.
+async function resolveAgreementParty(owner: User, property?: typeof propertiesTable.$inferSelect | null) {
+  if (property && property.ownerId !== owner.id) {
+    throw new Error("Agreement property owner mismatch");
+  }
+  const [profile] = owner.role === "partner"
+    ? await db.select().from(partnerProfilesTable)
+        .where(eq(partnerProfilesTable.userId, owner.id)).limit(1)
+    : [];
+  const clean = (value?: string | null) => (value ?? "").trim().replace(/\s+/g, " ");
+  return {
+    "Hotel / Property Name": clean(property?.name),
+    "Legal Entity Name": clean(profile?.businessName),
+    "Registered Address": clean(profile?.address),
+    "Property Address": property ? [
+      property.address, property.area, property.city, property.state, property.pincode, property.country,
+    ].map(clean).filter(Boolean).join(", ") : "",
+    "Authorized Representative": clean(owner.name),
+    "Designation": "",
+    "Email": clean(property?.contactEmail) || clean(owner.email),
+    "Phone": clean(profile?.contactPhone) || clean(property?.contactPhone),
+    "GST/VAT/Tax Registration No.": clean(profile?.gstNumber),
+    "Business Registration No.": "",
+  };
+}
+
+// The same template is used for partners and agents; the agreement number is
+// the PM reference for partners and the stable agent user ID for agents.
+async function renderHotelAgreement(
+  agreementNo: string,
+  owner: User,
+  property?: typeof propertiesTable.$inferSelect | null,
+): Promise<Buffer> {
+    const assetsDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)),
+      import.meta.url.includes("/src/routes/") ? "../../assets" : "../assets");
+    const [source, fontBytes, boldBytes, logoBytes] = await Promise.all([
+      readFile(path.join(assetsDir, "hotel-partner-agreement.txt"), "utf8"),
+      readFile(path.join(assetsDir, "Inter_400Regular.ttf")),
+      readFile(path.join(assetsDir, "Inter_700Bold.ttf")),
+      readFile(path.join(assetsDir, "staybest-brand-tagline-1789131885718.png")),
+    ]);
+    const pdf = await PDFDocument.create();
+    pdf.registerFontkit(fontkit);
+    const regular = await pdf.embedFont(fontBytes);
+    const bold = await pdf.embedFont(boldBytes);
+    const logo = await pdf.embedPng(logoBytes);
+    const party = await resolveAgreementParty(owner, property);
+    const text = source.replace("[STB/HP/_____]", agreementNo)
+      .replace(/(AND\r?\n\r?\n)([\s\S]*?)(\r?\n\r?\nHereinafter referred to as the “Hotel Partner”)/,
+        (_match, start: string, block: string, end: string) => {
+          let filled = block;
+          for (const [label, value] of Object.entries(party)) {
+            const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+            filled = filled.replace(
+              new RegExp(`^${escapedLabel}: \\[Insert [^\\]]+\\]$`, "m"),
+              () => `${label}: ${value}`,
+            );
+          }
+          return start + filled + end;
+        });
+    const lines = [
+      "PLEASE SIGN THIS AGREEMENT AND UPLOAD THE SIGNED PDF IN YOUR DOCS.",
+      "Complete all blank legal and commercial fields before signing.",
+      "",
+      ...text.split(/\r?\n/),
+    ];
+    const width = 595.28, height = 841.89, margin = 48;
+    let page = pdf.addPage([width, height]);
+    let y = height - margin;
+    const addPage = () => {
+      page.drawImage(logo, { x: margin, y: height - 39, width: 30, height: 30 });
+      page.drawText(`StayBestt  |  Agreement ${agreementNo}`, {
+        x: margin + 40, y: height - 27, size: 9, font: bold,
+        maxWidth: width - 2 * margin - 40, lineHeight: 10,
+      });
+      y = height - margin - 15;
+    };
+    addPage();
+    for (const raw of lines) {
+      const heading = /^\d+\.\s+[A-Z]|^HOTEL PARTNER|^FOR (STAYBESTT|HOTEL PARTNER)/.test(raw);
+      const font = heading ? bold : regular;
+      const size = heading ? 11 : 9.5;
+      const safe = raw.replace(/^⸻$/, "").replace(/☐/g, "[ ]").replace(/\t/g, "    ");
+      const words = safe.split(/\s+/);
+      let line = "";
+      const flush = () => {
+        if (y < margin + 25) { page = pdf.addPage([width, height]); addPage(); }
+        if (line) page.drawText(line, { x: margin, y, size, font, maxWidth: width - 2 * margin });
+        y -= heading ? 17 : 14;
+        line = "";
+      };
+      if (!safe.trim()) { y -= 8; continue; }
+      for (const word of words) {
+        const next = line ? `${line} ${word}` : word;
+        if (font.widthOfTextAtSize(next, size) > width - 2 * margin && line) flush();
+        line = line ? `${line} ${word}` : word;
+      }
+      flush();
+    }
+    return Buffer.from(await pdf.save());
+}
+
+router.get("/agent/agreement", requireAgent, async (req, res) => {
+  const rawPropertyId = req.query.propertyId;
+  const property = rawPropertyId === undefined ? null : await ownAgentProperty(req, Number(rawPropertyId));
+  if (rawPropertyId !== undefined && !property) {
+    res.status(404).json({ message: "Submitted property not found" }); return;
+  }
+  try {
+    const bytes = await renderHotelAgreement(req.currentUser!.id, req.currentUser!, property);
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", 'attachment; filename="agent-hotel-agreement.pdf"');
+    res.setHeader("Cache-Control", "private, no-store");
+    res.send(bytes);
+  } catch (error) {
+    req.log.error({ err: error }, "Could not generate agent agreement");
+    res.status(500).json({ message: "Agreement PDF is currently unavailable" });
+  }
+});
+
+router.get("/admin/agents/:agentId/agreement", requirePropertyDocumentAdmin, async (req, res) => {
+  const agentId = String(req.params.agentId);
+  const [agent] = await db.select().from(usersTable)
+    .where(and(eq(usersTable.id, agentId), eq(usersTable.role, "agent"))).limit(1);
+  if (!agent) { res.status(404).json({ message: "Agent not found" }); return; }
+  const rawPropertyId = req.query.propertyId;
+  let property: typeof propertiesTable.$inferSelect | null = null;
+  if (rawPropertyId !== undefined) {
+    const propertyId = Number(rawPropertyId);
+    if (!Number.isSafeInteger(propertyId) || propertyId <= 0) {
+      res.status(400).json({ message: "Invalid property" }); return;
+    }
+    const [owned] = await db.select().from(propertiesTable)
+      .where(and(eq(propertiesTable.id, propertyId), eq(propertiesTable.ownerId, agentId))).limit(1);
+    if (!owned || owned.status === "rejected") {
+      res.status(404).json({ message: "Submitted property not found" }); return;
+    }
+    property = owned;
+  }
+  try {
+    const bytes = await renderHotelAgreement(agentId, agent, property);
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", 'attachment; filename="agent-hotel-agreement.pdf"');
+    res.setHeader("Cache-Control", "private, no-store");
+    res.send(bytes);
+  } catch (error) {
+    req.log.error({ err: error }, "Could not generate admin agent agreement");
+    res.status(500).json({ message: "Agreement PDF is currently unavailable" });
+  }
+});
+
+const agentDocumentDto = (document: typeof agentAgreementDocumentsTable.$inferSelect) => ({
+  id: document.id,
+  agentId: document.agentId,
+  propertyId: document.propertyId,
+  originalName: document.originalName,
+  originalBytes: document.originalBytes,
+  storedBytes: document.storedBytes,
+  status: document.status,
+  reviewedBy: document.reviewedBy,
+  reviewedAt: document.reviewedAt?.toISOString() ?? null,
+  reviewReason: document.reviewReason,
+  createdAt: document.createdAt.toISOString(),
+});
+
+router.get("/agent/agreement-documents", requireAgent, async (req, res) => {
+  const documents = await db.select().from(agentAgreementDocumentsTable)
+    .where(eq(agentAgreementDocumentsTable.agentId, req.currentUser!.id))
+    .orderBy(sql`${agentAgreementDocumentsTable.createdAt} desc`);
+  res.json(documents.map(agentDocumentDto));
+});
+
+router.post("/agent/agreement-documents", requireAgent, async (req, res) => {
+  const rawId = req.query.propertyId;
+  const property = rawId === undefined ? null : await ownAgentProperty(req, Number(rawId));
+  if (rawId !== undefined && !property) { res.status(404).json({ message: "Submitted property not found" }); return; }
+  const length = Number(req.get("content-length"));
+  if (!Number.isSafeInteger(length) || length <= 0 || length > MAX_BYTES) {
+    res.status(length > MAX_BYTES ? 413 : 400).json({ message: "PDF Content-Length must be between 1 byte and 20 MiB" });
+    return;
+  }
+  if ((req.get("content-type") ?? "").split(";")[0].trim() !== "application/pdf") {
+    res.status(400).json({ message: "Upload a signed PDF" }); return;
+  }
+  const uploadId = randomUUID();
+  const stageKey = `property-documents/staging/agent-agreement-${uploadId}`;
+  const finalKey = `property-documents/final/agent-agreement-${uploadId}`;
+  let committed = false;
+  try {
+    const bytes = await storage.writePrivateObjectStream(stageKey, req, MAX_BYTES, "application/pdf");
+    if (bytes !== length) throw new PropertyDocumentValidationError("Uploaded size does not match the declared size");
+    const stage = await storage.getPrivateObjectFileForKey(stageKey);
+    const [metadata] = await stage.getMetadata();
+    if (!metadata.generation || Number(metadata.size) !== length) {
+      throw new PropertyDocumentValidationError("Uploaded PDF changed during validation");
+    }
+    const pinned = await storage.getPrivateObjectFileForKey(stageKey, true, metadata.generation);
+    const contents = await readObjectAtMost(pinned, MAX_BYTES);
+    if (contents.length !== length || !hasMagicBytes(contents, "application/pdf")) {
+      throw new PropertyDocumentValidationError("Uploaded bytes are not a valid PDF");
+    }
+    const sanitized = await optimizeDocument(contents, "application/pdf");
+    if (sanitized.length > MAX_BYTES) throw new PropertyDocumentValidationError("Sanitized PDF exceeds 20 MiB");
+    await storage.writePrivateObject(finalKey, sanitized, "application/pdf");
+    // Ownership can change while the upload is being sanitized.
+    if (property && !await ownAgentProperty(req, property.id)) {
+      throw new PropertyDocumentValidationError("Submitted property is no longer owned by this agent");
+    }
+    const [saved] = await db.insert(agentAgreementDocumentsTable).values({
+      id: uploadId,
+      agentId: req.currentUser!.id,
+      propertyId: property?.id ?? null,
+      originalName: `signed-hotel-agreement-${uploadId}.pdf`,
+      originalBytes: length,
+      storedBytes: sanitized.length,
+      storageKey: finalKey,
+      status: "pending",
+    }).returning();
+    committed = true;
+    res.status(201).json(agentDocumentDto(saved));
+  } catch (error) {
+    if (!committed) await storage.deletePrivateObject(finalKey).catch(() => undefined);
+    if (error instanceof PropertyDocumentValidationError) {
+      res.status(400).json({ message: error.message });
+    } else if (error instanceof Error && error.message.startsWith("Object exceeds")) {
+      res.status(413).json({ message: "Upload exceeds the 20 MiB maximum" });
+    } else {
+      req.log.error({ err: error }, "Agent agreement upload failed");
+      res.status(500).json({ message: "Failed to store signed agreement" });
+    }
+  } finally {
+    await storage.deletePrivateObject(stageKey).catch(() => undefined);
+  }
+});
+
+router.post("/agent/agreement-documents/:documentId/link", requireAgent, async (req, res) => {
+  const property = await ownAgentProperty(req, Number(req.body?.propertyId));
+  if (!property) { res.status(404).json({ message: "Submitted property not found" }); return; }
+  const id = String(req.params.documentId);
+  if (!/^[0-9a-f-]{36}$/i.test(id)) { res.status(400).json({ message: "Invalid document" }); return; }
+  const [linked] = await db.update(agentAgreementDocumentsTable).set({ propertyId: property.id })
+    .where(and(eq(agentAgreementDocumentsTable.id, id), eq(agentAgreementDocumentsTable.agentId, req.currentUser!.id),
+      isNull(agentAgreementDocumentsTable.propertyId))).returning();
+  if (!linked) { res.status(409).json({ message: "Document does not exist or is already linked" }); return; }
+  res.json(agentDocumentDto(linked));
+});
+
+router.get("/admin/agent-agreement-documents", requirePropertyDocumentAdmin, async (_req, res) => {
+  const rows = await db.select({ document: agentAgreementDocumentsTable, property: propertiesTable, agent: usersTable })
+    .from(agentAgreementDocumentsTable)
+    .leftJoin(propertiesTable, eq(agentAgreementDocumentsTable.propertyId, propertiesTable.id))
+    .innerJoin(usersTable, eq(agentAgreementDocumentsTable.agentId, usersTable.id))
+    .orderBy(sql`${agentAgreementDocumentsTable.createdAt} desc`);
+  res.json(rows.map(({ document, property, agent }) => ({
+    ...agentDocumentDto(document),
+    propertyNumber: property?.propertyNumber ?? null,
+    propertyName: property?.name ?? null,
+    agentName: agent.name,
+    agentEmail: agent.email,
+  })));
+});
+
+router.post("/admin/agent-agreement-documents/:documentId/review", requirePropertyDocumentAdmin, async (req, res) => {
+  const status = req.body?.status;
+  const reason = typeof req.body?.reason === "string" ? req.body.reason.trim() : "";
+  if (!["approved", "rejected"].includes(status) || (status === "rejected" && !reason)) {
+    res.status(400).json({ message: "Approval or rejection with a reason is required" }); return;
+  }
+  const id = String(req.params.documentId);
+  if (!/^[0-9a-f-]{36}$/i.test(id)) { res.status(400).json({ message: "Invalid document" }); return; }
+  const [document] = await db.update(agentAgreementDocumentsTable).set({
+    status, reviewedBy: await actorId(req), reviewedAt: new Date(), reviewReason: reason || null,
+  }).where(and(eq(agentAgreementDocumentsTable.id, id), eq(agentAgreementDocumentsTable.status, "pending"))).returning();
+  if (!document) { res.status(409).json({ message: "Document does not exist or is already reviewed" }); return; }
+  res.json(agentDocumentDto(document));
+});
+
+async function downloadAgentAgreement(req: Request, res: Response, admin: boolean): Promise<void> {
+  const id = String(req.params.documentId);
+  if (!/^[0-9a-f-]{36}$/i.test(id)) { res.status(400).json({ message: "Invalid document" }); return; }
+  const [document] = await db.select().from(agentAgreementDocumentsTable)
+    .where(eq(agentAgreementDocumentsTable.id, id)).limit(1);
+  if (!document || (!admin && (
+    document.agentId !== req.currentUser!.id ||
+    (document.propertyId !== null && !await ownAgentProperty(req, document.propertyId))
+  ))) { res.status(404).json({ message: "Document not found" }); return; }
+  try {
+    const file = await storage.getPrivateObjectFileForKey(document.storageKey);
+    const [metadata] = await file.getMetadata();
+    const size = Number(metadata.size);
+    if (!metadata.generation || !Number.isSafeInteger(size) || size < 1 || size !== document.storedBytes || size > MAX_BYTES) {
+      res.status(409).json({ message: "Stored document changed" }); return;
+    }
+    const pinned = await storage.getPrivateObjectFileForKey(document.storageKey, true, metadata.generation);
+    const [pinnedMetadata] = await pinned.getMetadata();
+    if (String(pinnedMetadata.generation) !== String(metadata.generation) || Number(pinnedMetadata.size) !== size) {
+      res.status(409).json({ message: "Stored document changed" }); return;
+    }
+    const [current] = await db.select({ storageKey: agentAgreementDocumentsTable.storageKey })
+      .from(agentAgreementDocumentsTable).where(eq(agentAgreementDocumentsTable.id, id)).limit(1);
+    if (current?.storageKey !== document.storageKey) { res.status(409).json({ message: "Document changed" }); return; }
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Length", String(size));
+    res.setHeader("Cache-Control", "private, no-store");
+    res.setHeader("Content-Disposition", `attachment; filename="${document.originalName}"`);
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    const source = pinned.createReadStream();
+    const bounded = createBoundedDownloadStream(source, MAX_BYTES, size);
+    bounded.on("error", error => {
+      req.log.error({ err: error, id }, "Agent agreement download failed");
+      if (!res.headersSent) res.status(500).json({ message: "Document download failed" });
+      else res.destroy(error);
+    });
+    source.pipe(bounded).pipe(res);
+  } catch (error) {
+    if (error instanceof ObjectNotFoundError) { res.status(404).json({ message: "Document content not found" }); return; }
+    throw error;
+  }
+}
+
+router.get("/agent/agreement-documents/:documentId/download", requireAgent, (req, res) =>
+  downloadAgentAgreement(req, res, false));
+router.get("/admin/agent-agreement-documents/:documentId/download", requirePropertyDocumentAdmin, (req, res) =>
+  downloadAgentAgreement(req, res, true));
 
 export default router;

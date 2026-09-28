@@ -16,7 +16,7 @@ import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { 
   MapPin, Star, Heart, Check, Clock, Info, 
-  ChevronRight, Calendar, Users, Loader2 
+  ChevronRight, Calendar, Users, Loader2, ChevronLeft
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +26,17 @@ import { useGuestIdentity } from "@/hooks/use-auth";
 import { toast } from "sonner";
 import { format, addDays } from "date-fns";
 import { PropertyMap } from "@/components/PropertyMap";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+
+type PhotoGallery = {
+  title: string;
+  photos: string[];
+  index: number;
+};
+
+function roomPhotos(room: { imageUrl: string; images?: string[] }) {
+  return [...new Set([room.imageUrl, ...(room.images ?? [])].filter(Boolean))];
+}
 
 export default function PropertyDetail() {
   const params = useParams();
@@ -46,6 +57,18 @@ export default function PropertyDetail() {
   );
   const guests = adults + children;
   const [isCheckingAvailability, setIsCheckingAvailability] = useState(false);
+  const [gallery, setGallery] = useState<PhotoGallery | null>(null);
+
+  const openGallery = (title: string, photos: string[], index: number) => {
+    if (photos.length > 0) setGallery({ title, photos, index });
+  };
+
+  const changePhoto = (direction: number) => {
+    setGallery(current => current && ({
+      ...current,
+      index: (current.index + direction + current.photos.length) % current.photos.length,
+    }));
+  };
 
   const { data: property, isLoading } = useGetProperty(propertyId, {
     query: { enabled: !!propertyId, queryKey: getGetPropertyQueryKey(propertyId) }
@@ -184,16 +207,74 @@ export default function PropertyDetail() {
       {/* Image Grid */}
       <div className="container mx-auto px-4 py-8">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 rounded-2xl overflow-hidden h-[400px] md:h-[500px]">
-          <div className="md:col-span-2 md:row-span-2 relative">
-            <img src={property.images[0]} alt={property.name} className="w-full h-full object-cover" />
-          </div>
+          {property.images[0] && (
+            <button
+              type="button"
+              onClick={() => openGallery(property.name, property.images, 0)}
+              aria-label={`View photos of ${property.name}, starting at photo 1`}
+              data-testid="button-property-photo-0"
+              className="md:col-span-2 md:row-span-2 relative overflow-hidden cursor-pointer focus-visible:outline focus-visible:outline-4 focus-visible:outline-primary"
+            >
+              <img src={property.images[0]} alt={property.name} className="w-full h-full object-cover" />
+              {property.images.length > 1 && <span className="absolute bottom-4 right-4 rounded-lg bg-black/75 px-3 py-2 text-sm font-medium text-white md:hidden">View all {property.images.length} photos</span>}
+            </button>
+          )}
           {property.images.slice(1, 5).map((img, i) => (
-            <div key={i} className="hidden md:block relative">
+            <button
+              key={i}
+              type="button"
+              onClick={() => openGallery(property.name, property.images, i + 1)}
+              aria-label={`View photos of ${property.name}, starting at photo ${i + 2}`}
+              data-testid={`button-property-photo-${i + 1}`}
+              className="hidden md:block relative overflow-hidden cursor-pointer focus-visible:outline focus-visible:outline-4 focus-visible:outline-primary"
+            >
               <img src={img} alt={`${property.name} ${i+1}`} className="w-full h-full object-cover" />
-            </div>
+            </button>
           ))}
         </div>
       </div>
+
+      <Dialog open={gallery !== null} onOpenChange={open => { if (!open) setGallery(null); }}>
+        <DialogContent
+          aria-describedby={undefined}
+          onKeyDown={event => {
+            if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+              event.preventDefault();
+              changePhoto(event.key === "ArrowLeft" ? -1 : 1);
+            }
+          }}
+          className="flex h-[min(90dvh,900px)] w-[calc(100vw-1rem)] max-w-6xl flex-col gap-3 overflow-hidden rounded-xl border-0 bg-zinc-950 p-3 text-white sm:p-6 [&>button]:text-white"
+        >
+          {gallery && (
+            <>
+              <div className="pr-10">
+                <DialogTitle className="truncate text-base sm:text-lg">{gallery.title}</DialogTitle>
+                <p className="mt-1 text-sm text-white/70" aria-live="polite" data-testid="text-gallery-counter">
+                  Photo {gallery.index + 1} of {gallery.photos.length}
+                </p>
+              </div>
+              <div className="flex min-h-0 flex-1 items-center justify-center">
+                <img
+                  src={gallery.photos[gallery.index]}
+                  alt={`${gallery.title}, photo ${gallery.index + 1} of ${gallery.photos.length}`}
+                  className="max-h-full max-w-full object-contain"
+                  data-testid="img-gallery-selected"
+                />
+              </div>
+              {gallery.photos.length > 1 && (
+                <div className="flex shrink-0 items-center justify-between gap-4">
+                  <Button type="button" variant="outline" className="gap-2 bg-zinc-900 text-white hover:bg-zinc-800 hover:text-white" onClick={() => changePhoto(-1)} aria-label="Previous photo" data-testid="button-gallery-previous">
+                    <ChevronLeft className="h-4 w-4" /> Previous
+                  </Button>
+                  <Button type="button" variant="outline" className="gap-2 bg-zinc-900 text-white hover:bg-zinc-800 hover:text-white" onClick={() => changePhoto(1)} aria-label="Next photo" data-testid="button-gallery-next">
+                    Next <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <div className="container mx-auto px-4 pb-20">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
@@ -276,9 +357,9 @@ export default function PropertyDetail() {
                 <div className="space-y-6">
                   {property.rooms.map(room => (
                     <div key={room.id} className="border border-border rounded-2xl overflow-hidden flex flex-col md:flex-row bg-white">
-                      <div className="w-full md:w-1/3 aspect-[4/3] md:aspect-auto relative">
+                       <button type="button" onClick={() => openGallery(room.name, roomPhotos(room), 0)} aria-label={`View photos of ${room.name}`} data-testid={`button-room-photo-${room.id}`} className="w-full md:w-1/3 aspect-[4/3] md:aspect-auto relative overflow-hidden cursor-pointer focus-visible:outline focus-visible:outline-4 focus-visible:outline-primary">
                         <img src={room.imageUrl} alt={room.name} className="w-full h-full object-cover" />
-                      </div>
+                       </button>
                       <div className="p-6 flex-1 flex flex-col">
                         <div className="flex justify-between items-start mb-2">
                           <h3 className="text-xl font-bold text-secondary">{room.name}</h3>
@@ -317,9 +398,9 @@ export default function PropertyDetail() {
                   {availability && availability.length > 0 ? (
                     availability.map((avail) => (
                       <div key={avail.room.id} className="border border-primary/20 rounded-2xl overflow-hidden flex flex-col md:flex-row bg-white shadow-sm ring-1 ring-primary/5">
-                        <div className="w-full md:w-1/3 aspect-[4/3] md:aspect-auto relative">
+                         <button type="button" onClick={() => openGallery(avail.room.name, roomPhotos(avail.room), 0)} aria-label={`View photos of ${avail.room.name}`} data-testid={`button-available-room-photo-${avail.room.id}`} className="w-full md:w-1/3 aspect-[4/3] md:aspect-auto relative overflow-hidden cursor-pointer focus-visible:outline focus-visible:outline-4 focus-visible:outline-primary">
                           <img src={avail.room.imageUrl} alt={avail.room.name} className="w-full h-full object-cover" />
-                        </div>
+                         </button>
                         <div className="p-6 flex-1 flex flex-col">
                           <div className="flex justify-between items-start mb-2">
                             <h3 className="text-xl font-bold text-secondary">{avail.room.name}</h3>

@@ -7,7 +7,9 @@ import {
   useSetVendorPassword,
   getListAdminVendorsQueryKey,
   getListVendorCredentialsQueryKey,
+  useListAdminPropertyDocuments,
 } from "@workspace/api-client-react";
+import { AdminAgreementDownloads } from "@/components/property-documents/AdminAgreementDownloads";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import {
@@ -116,6 +118,7 @@ export default function AdminVendors() {
 
   const vendors = data?.vendors ?? [];
   const unassigned = data?.unassignedProperties ?? [];
+  const { data: partnerDocuments, isError: documentsError } = useListAdminPropertyDocuments();
 
   return (
     <AdminLayout title="Vendors">
@@ -314,6 +317,13 @@ export default function AdminVendors() {
                   ))}
                 </ul>
               )}
+              <div className="p-5 border-t">
+                <p className="font-semibold mb-2">Partner agreements</p>
+                {documentsError && <p className="text-destructive text-sm">Could not load signed agreements.</p>}
+                <AdminAgreementDownloads ownerId={vendor.id} role="partner" properties={vendor.properties}
+                  signed={(partnerDocuments ?? []).filter(doc => doc.uploadedBy === vendor.id &&
+                    /^signed-hotel-agreement-[0-9]+\.pdf$/i.test(doc.originalName))} />
+              </div>
             </div>
           ))}
 

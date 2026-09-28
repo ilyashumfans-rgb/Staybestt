@@ -24,7 +24,11 @@
       "bundleIdentifier": "com.replit.staybest"
     },
     "android": {
-      "package": "com.replit.staybest"
+      "package": "com.replit.staybest",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#e5dfd5"
+      }
     },
     "web": {
       "favicon": "./assets/images/icon.png"

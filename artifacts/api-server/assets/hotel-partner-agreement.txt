@@ -1,0 +1,530 @@
+HOTEL PARTNER ENROLLMENT & BOOKING AGREEMENT
+
+Agreement No.: [STB/HP/_____]
+Effective Date: [DD/MM/YYYY]
+
+This Hotel Partner Enrollment & Booking Agreement (“Agreement”) is entered into between:
+
+1. PARTIES
+
+StayBestt
+A company/platform providing hotel discovery and booking services
+Registered Address: [Insert Address]
+Email: [Insert Email]
+Phone: [Insert Phone Number]
+
+Hereinafter referred to as “StayBestt”, “Platform”, “we”, “us”, or “our”;
+
+AND
+
+Hotel / Property Name: [Insert Hotel Name]
+Legal Entity Name: [Insert Legal Entity Name]
+Registered Address: [Insert Address]
+Property Address: [Insert Address]
+Authorized Representative: [Insert Name]
+Designation: [Insert Designation]
+Email: [Insert Email]
+Phone: [Insert Phone Number]
+GST/VAT/Tax Registration No.: [Insert Number]
+Business Registration No.: [Insert Number]
+
+Hereinafter referred to as the “Hotel Partner”, “Hotel”, “Property”, “you”, or “your”.
+
+StayBestt and the Hotel Partner are individually a “Party” and collectively the “Parties.”
+
+⸻
+
+2. PURPOSE OF THE AGREEMENT
+
+The purpose of this Agreement is to establish the terms under which the Hotel Partner will enroll its property with StayBestt and make rooms, rates, packages, and related accommodation services available for booking through the StayBestt website, application, and other authorized distribution channels.
+
+The Parties intend to establish a mutually beneficial relationship in which StayBestt promotes and facilitates bookings for the Hotel Partner and the Hotel Partner provides the accommodation and services associated with confirmed reservations.
+
+⸻
+
+3. HOTEL ENROLLMENT
+
+The Hotel Partner agrees to provide StayBestt with accurate and complete information required to create and maintain the property’s listing.
+
+This may include:
+
+* Hotel name and address
+* Contact details
+* Property description
+* Room categories
+* Room photographs
+* Amenities and facilities
+* Number of rooms available
+* Room occupancy limits
+* Meal plans
+* Check-in and check-out times
+* Cancellation policies
+* Child and extra-bed policies
+* Applicable taxes and fees
+* Rates and promotional offers
+* Hotel policies
+* Required licenses and registrations
+
+The Hotel Partner represents that it has the necessary authority to provide the information and offer the accommodation services through StayBestt.
+
+⸻
+
+4. HOTEL REPRESENTATIONS AND WARRANTIES
+
+The Hotel Partner represents and warrants that:
+
+1. The information provided to StayBestt is accurate and current.
+2. It has all licenses, registrations, permits, approvals, and insurance required to operate the property.
+3. The property complies with applicable health, safety, fire, employment, consumer-protection, and hospitality requirements.
+4. It has the authority to enter into this Agreement.
+5. The rooms and services offered through StayBestt will be available as represented.
+6. It will honor valid confirmed reservations made through StayBestt, subject to the applicable booking terms.
+7. It will promptly notify StayBestt of any material change affecting availability, pricing, facilities, or the ability to honor reservations.
+
+⸻
+
+5. HOTEL LISTING AND CONTENT
+
+The Hotel Partner grants StayBestt permission during the term of this Agreement to use the hotel’s name, logo, photographs, descriptions, trademarks, and other materials supplied by the Hotel Partner for the purpose of listing, marketing, promoting, and facilitating bookings for the property.
+
+The Hotel Partner confirms that it has the necessary rights to provide such materials and that their authorized use by StayBestt will not knowingly infringe third-party rights.
+
+StayBestt may format, resize, organize, or otherwise adapt supplied content for presentation on its website, application, and authorized marketing channels, provided that the underlying information is not intentionally misrepresented.
+
+⸻
+
+6. RATES AND ROOM INVENTORY
+
+The Hotel Partner shall provide StayBestt with agreed room rates and inventory.
+
+The Hotel Partner is responsible for ensuring that rates and availability supplied to StayBestt are accurate.
+
+The Hotel Partner shall promptly update StayBestt regarding:
+
+* Room availability
+* Rate changes
+* Blackout dates
+* Closed dates
+* Room closures
+* Renovations
+* Temporary service restrictions
+* Changes to hotel facilities
+* Changes to applicable policies
+
+Unless otherwise agreed in writing, the Hotel Partner shall honor the rate and room type displayed at the time a reservation is confirmed.
+
+⸻
+
+7. RATE PARITY
+
+Where the Parties have agreed to rate-parity obligations, the Hotel Partner shall provide StayBestt with the agreed rate and conditions applicable to the relevant distribution channel.
+
+Any specific rate-parity arrangement should be recorded in Schedule A of this Agreement.
+
+Nothing in this clause shall require either Party to act contrary to applicable competition or consumer-protection laws.
+
+⸻
+
+8. COMMISSION
+
+For each eligible booking generated through StayBestt, the Hotel Partner shall pay StayBestt a commission calculated according to the commercial terms agreed by the Parties.
+
+Commission Rate: [_____%]
+
+Commission Basis: [Room Rate / Room Rate excluding applicable taxes / Other]
+
+The applicable commission structure shall be specified in Schedule A.
+
+Unless otherwise agreed, taxes imposed on the StayBestt commission shall be handled in accordance with applicable law.
+
+⸻
+
+9. PAYMENT AND SETTLEMENT
+
+The Parties shall use the following settlement model:
+
+Settlement Model:
+☐ StayBestt collects payment from the guest and settles the Hotel Partner
+☐ Hotel Partner collects payment from the guest and pays commission to StayBestt
+☐ Other: [Specify]
+
+Settlement Frequency: [Weekly / Bi-weekly / Monthly / Other]
+
+Payment Due Date: [Insert Terms]
+
+The Parties shall provide accurate invoices, tax documents, booking records, and other information reasonably required to complete reconciliation.
+
+Any disputed amount should be notified to the other Party within [__] days of receipt of the applicable statement.
+
+Undisputed amounts shall remain payable in accordance with the agreed settlement terms.
+
+⸻
+
+10. TAXES
+
+Each Party shall be responsible for taxes imposed on it under applicable law.
+
+The Hotel Partner is responsible for taxes, duties, fees, or other governmental charges applicable to the accommodation services provided by the Hotel Partner, except where applicable law or the agreed booking structure provides otherwise.
+
+Each Party shall provide required tax documentation to the other Party where legally required.
+
+⸻
+
+11. BOOKING CONFIRMATION
+
+A reservation made through StayBestt and confirmed through the StayBestt system shall constitute a valid booking subject to the applicable booking terms.
+
+The Hotel Partner shall receive booking information through the agreed communication channel.
+
+The Hotel Partner shall maintain accurate records of reservations and shall ensure that its staff are able to identify and process StayBestt reservations.
+
+⸻
+
+12. HONOURING CONFIRMED BOOKINGS
+
+The Hotel Partner shall make reasonable arrangements to ensure that confirmed bookings are honored.
+
+The Hotel Partner shall not knowingly cancel or refuse a confirmed reservation except where permitted by the booking terms, applicable law, or circumstances beyond its reasonable control.
+
+If the Hotel Partner is unable to accommodate a confirmed guest, it shall immediately notify StayBestt and cooperate in arranging an appropriate alternative solution.
+
+Any relocation, refund, compensation, or additional cost arising from a hotel-initiated inability to honor a confirmed booking shall be handled according to the applicable commercial terms and law.
+
+⸻
+
+13. OVERBOOKING
+
+The Hotel Partner shall take reasonable measures to prevent overbooking.
+
+If an overbooking occurs, the Hotel Partner shall immediately notify StayBestt and cooperate with StayBestt to minimize disruption to the guest.
+
+Where the Hotel Partner is responsible for the overbooking, any reasonable costs or guest arrangements agreed between the Parties may be charged to the responsible Party, subject to applicable law and the agreed commercial terms.
+
+⸻
+
+14. CANCELLATION AND NO-SHOW POLICY
+
+The cancellation and no-show rules applicable to each room, rate, or package shall be communicated to StayBestt before the relevant inventory is made available for booking.
+
+The Hotel Partner agrees to honor the cancellation policy displayed to the guest at the time of booking.
+
+Any modification to cancellation policies shall apply prospectively unless otherwise agreed.
+
+⸻
+
+15. HOTEL SERVICES AND GUEST EXPERIENCE
+
+The Hotel Partner is solely responsible for providing the accommodation and hotel services associated with a reservation.
+
+The Hotel Partner shall ensure that:
+
+* Rooms are reasonably clean and maintained.
+* Advertised facilities are available as represented, subject to disclosed restrictions.
+* Guests receive the services included in their reservation.
+* Applicable safety and legal requirements are followed.
+* Hotel staff treat guests professionally and lawfully.
+* Additional mandatory charges are disclosed as required by law.
+
+⸻
+
+16. GUEST COMPLAINTS
+
+The Hotel Partner shall promptly investigate complaints relating to accommodation, facilities, hotel staff, cleanliness, safety, or services provided directly by the Hotel Partner.
+
+StayBestt may assist in communicating with the guest but does not assume responsibility for services directly provided by the Hotel Partner.
+
+The Parties shall cooperate in good faith to resolve guest complaints efficiently.
+
+⸻
+
+17. HOTEL-IMPOSED CHARGES
+
+Any mandatory charges applicable to a reservation should be clearly disclosed before booking where required by applicable law.
+
+Optional charges, deposits, incidental charges, and additional services may be collected directly by the Hotel Partner where properly disclosed and legally permitted.
+
+The Hotel Partner shall not impose undisclosed mandatory charges that contradict the booking terms provided to the guest.
+
+⸻
+
+18. PROMOTIONS AND DISCOUNTS
+
+The Parties may agree to promotional campaigns, member discounts, seasonal offers, packages, or other commercial promotions.
+
+Each promotion should specify, where applicable:
+
+* Discount amount
+* Validity period
+* Eligible room types
+* Eligible dates
+* Minimum stay requirements
+* Blackout dates
+* Cancellation conditions
+* Payment conditions
+* Responsibility for funding the discount
+
+No Party shall be required to participate in a promotion unless agreed in writing.
+
+⸻
+
+19. MEMBER PROGRAM
+
+Where StayBestt operates a member program, the Hotel Partner may participate in member-only rates, benefits, upgrades, offers, or other benefits as separately agreed.
+
+The specific benefits and commercial terms shall be recorded in the applicable schedule or written confirmation.
+
+Any changes in the near future with respect to commercials, amendments shall be called upon for a meeting to adhere there off
+⸻
+
+20. MARKETING AND BRAND USAGE
+
+During the term of this Agreement, each Party may use the other Party’s approved name, logo, and branding solely for purposes connected with the agreed partnership.
+
+Neither Party may imply an endorsement, ownership relationship, or corporate affiliation that does not exist.
+
+Any use of trademarks shall comply with the applicable brand guidelines supplied by the relevant owner.
+
+⸻
+
+21. DATA PROTECTION AND PRIVACY
+
+Each Party shall comply with applicable privacy and data-protection laws relating to information processed under this Agreement.
+
+Guest information received by the Hotel Partner shall be used only for legitimate purposes connected with fulfilling the reservation, providing hotel services, complying with legal obligations, and other permitted purposes.
+
+The Hotel Partner shall implement reasonable safeguards to protect guest and booking information against unauthorized access, disclosure, alteration, or loss.
+
+Neither Party shall sell or misuse guest information obtained through the partnership.
+
+Where required, the Parties shall enter into additional data-processing or privacy documentation.
+
+⸻
+
+22. CONFIDENTIALITY
+
+Each Party may receive confidential business, commercial, technical, financial, customer, or operational information from the other Party.
+
+The receiving Party shall:
+
+* Keep confidential information confidential.
+* Use it only for purposes of the partnership.
+* Restrict access to persons who need it for legitimate business purposes.
+* Take reasonable measures to prevent unauthorized disclosure.
+
+Confidentiality obligations shall not apply to information that is publicly available through no breach of this Agreement, was already lawfully known, is independently developed, or must be disclosed by law.
+
+⸻
+
+23. AUDIT AND RECORDS
+
+Each Party shall maintain reasonable records relating to bookings, payments, cancellations, commissions, and other transactions under this Agreement.
+
+Where reasonably necessary to verify amounts payable, a Party may request supporting records from the other Party, subject to reasonable notice and confidentiality obligations.
+
+⸻
+
+24. SERVICE INTERRUPTIONS AND FORCE MAJEURE
+
+Neither Party shall be liable for failure or delay caused by circumstances beyond its reasonable control, including natural disasters, government actions, war, civil disturbances, epidemics, major infrastructure failures, telecommunications failures, or other force majeure events.
+
+The affected Party shall notify the other Party as soon as reasonably practicable and take reasonable steps to mitigate the impact.
+
+⸻
+
+25. INSURANCE
+
+The Hotel Partner shall maintain insurance coverage appropriate for its operations and as required by applicable law.
+
+Upon reasonable request, the Hotel Partner may be required to provide evidence of applicable insurance coverage.
+
+⸻
+
+26. INDEMNIFICATION
+
+To the extent permitted by applicable law, each Party shall be responsible for claims, losses, damages, penalties, or reasonable costs arising from its own:
+
+* Breach of this Agreement
+* Negligence or willful misconduct
+* Violation of applicable law
+* Infringement of third-party intellectual-property rights
+* Unauthorized use or disclosure of confidential information
+
+Specific indemnity obligations should be finalized by legal counsel based on the Parties’ business structure and applicable law.
+
+⸻
+
+27. LIMITATION OF LIABILITY
+
+Except for liability that cannot legally be limited or excluded, neither Party shall be liable for indirect, incidental, special, consequential, or punitive damages arising from this Agreement.
+
+Any financial limitation of liability should be specified in Schedule A and reviewed by legal counsel for enforceability.
+
+Nothing in this Agreement shall exclude liability that cannot legally be excluded.
+
+⸻
+
+28. TERM
+
+This Agreement shall commence on the Effective Date and continue for:
+
+Initial Term: [12 months / Other]
+
+Unless terminated earlier under this Agreement, it may automatically renew for successive periods of [] unless either Party provides written notice of non-renewal at least [] days before the end of the applicable term.
+
+⸻
+
+29. TERMINATION
+
+Either Party may terminate this Agreement by providing:
+
+Notice Period: [30 / 60 / 90] days’ written notice.
+
+Either Party may terminate the Agreement immediately or on shorter notice where permitted by law if the other Party:
+
+* Commits a material breach and fails to remedy it within the applicable cure period.
+* Engages in fraud or serious misconduct.
+* Loses a material license or authorization required to perform its obligations.
+* Becomes insolvent or enters a legally recognized insolvency process.
+* Creates a material security, legal, or reputational risk to the other Party.
+
+⸻
+
+30. EFFECT OF TERMINATION
+
+Following termination:
+
+1. New bookings may be disabled from the agreed termination date.
+2. Existing confirmed reservations shall generally continue to be honored unless the Parties agree otherwise or applicable law requires otherwise.
+3. Outstanding commissions and settlement amounts shall remain payable.
+4. Each Party shall cease unauthorized use of the other’s confidential information and branding.
+5. Each Party shall return, delete, or securely retain information as required by applicable law and agreed data-retention obligations.
+
+⸻
+
+31. INDEPENDENT CONTRACTORS
+
+The Parties are independent contractors.
+
+Nothing in this Agreement creates a partnership, joint venture, employment relationship, agency relationship, franchise, or fiduciary relationship between the Parties unless expressly agreed in writing.
+
+Neither Party has authority to bind the other Party except as expressly authorized.
+
+⸻
+
+32. NON-EXCLUSIVITY
+
+Unless expressly agreed otherwise in writing, this Agreement is non-exclusive.
+
+The Hotel Partner may work with other booking platforms, and StayBestt may work with other hotels and accommodation providers.
+
+⸻
+
+33. ASSIGNMENT
+
+Neither Party may assign or transfer this Agreement without the prior written consent of the other Party, except where permitted by law or as part of a merger, restructuring, or transfer of substantially all relevant business assets.
+
+⸻
+
+34. NOTICES
+
+Formal notices under this Agreement shall be sent to the addresses or email addresses specified below:
+
+For StayBestt:
+Name: [Insert]
+Email: [Insert]
+Address: [Insert]
+
+For Hotel Partner:
+Name: [Insert]
+Email: [Insert]
+Address: [Insert]
+
+A Party shall promptly notify the other Party of any change in its contact information.
+
+⸻
+
+35. DISPUTE RESOLUTION
+
+The Parties shall first attempt to resolve disputes through good-faith discussions between authorized representatives.
+
+If a dispute cannot be resolved through negotiation within [30] days, the Parties may proceed with the dispute-resolution mechanism specified below:
+
+Method: [Courts / Arbitration / Mediation + Arbitration]
+
+Seat/Venue: [Insert]
+
+Governing Law:
+
+The final dispute-resolution provisions should be reviewed and completed by qualified legal counsel.
+
+⸻
+
+36. COMPLIANCE WITH LAW
+
+Each Party shall comply with applicable laws and regulations relevant to its obligations under this Agreement.
+
+The Hotel Partner remains responsible for maintaining all licenses, permits, registrations, and approvals required to operate its property.
+
+⸻
+
+37. AMENDMENTS
+
+Any material amendment to this Agreement shall be made in writing and accepted by authorized representatives of both Parties.
+
+Commercial terms such as rates, commission, inventory, and promotional arrangements may be updated through mutually agreed written schedules or platform documentation.
+
+⸻
+
+38. SEVERABILITY
+
+If any provision of this Agreement is determined to be invalid or unenforceable, the remaining provisions shall remain effective to the extent permitted by law.
+
+⸻
+
+39. ENTIRE AGREEMENT
+
+This Agreement, together with its schedules, booking terms, commercial terms, and other documents expressly incorporated into it, constitutes the agreement between the Parties concerning the subject matter.
+
+It supersedes prior written or oral understandings relating to the same subject matter, except for obligations that expressly survive.
+
+⸻
+
+40. COUNTERPARTS AND ELECTRONIC ACCEPTANCE
+
+This Agreement may be executed in counterparts and, where legally permitted, through electronic signatures or electronic acceptance.
+
+Each counterpart shall be considered an original, and together they shall constitute one agreement.
+
+⸻
+
+41. SIGNATURES
+
+By signing below, the authorized representatives confirm that they have read, understood, and agreed to the terms of this Agreement.
+
+FOR STAYBESTT
+
+Legal Entity Name: ______________________________
+
+Authorized Representative: ______________________
+
+Designation: ____________________________________
+
+Signature: ______________________________________
+
+Date: __________________________________________
+
+Company Seal (if applicable): ____________________
+
+⸻
+
+FOR HOTEL PARTNER
+
+Hotel / Legal Entity Name: ________________________
+
+Authorized Representative: ______________________
+
+Designation: ____________________________________
+
+Signature: ______________________________________
+
+Date: _____________

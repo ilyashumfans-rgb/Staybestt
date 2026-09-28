@@ -24,6 +24,7 @@ export * from "./commissionLedgerEvents";
 export * from "./payouts";
 export * from "./marketing";
 export * from "./agentManagementEvents";
+export * from "./agentAgreementDocuments";
 export * from "./billing";
 export * from "./refunds";
 export * from "./propertyDocuments";

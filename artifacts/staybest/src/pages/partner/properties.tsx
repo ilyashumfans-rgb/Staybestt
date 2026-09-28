@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { LocationFields } from "@/components/LocationFields";
 import { PartnerLayout } from "@/components/layout/PartnerLayout";
+import { PartnerAgreement } from "@/components/partner/PartnerAgreement";
 import { 
   useListPartnerProperties, 
   useUpdatePartnerProperty, 
@@ -50,6 +51,7 @@ export default function PartnerProperties() {
   const updateProp = useUpdatePartnerProperty();
   const registerProp = useRegisterPartnerProperty();
   const [registerOpen, setRegisterOpen] = useState(false);
+  const [agreementPropertyId, setAgreementPropertyId] = useState<number | null>(null);
   const [regForm, setRegForm] = useState({
     name: "", category: "prime", country: "", state: "", city: "", area: "", pincode: "", latitude: "", longitude: "", landmark: "", address: "",
     description: "", imageUrl: "", images: "", amenities: "", policies: "", startingPrice: "",
@@ -86,6 +88,7 @@ export default function PartnerProperties() {
       onSuccess: (res) => {
         toast.success(res.message);
         setRegisterOpen(false);
+        toast.info("Property registered. Open Property Docs / Agreement below to download, sign and upload it.");
         setRegForm({ name: "", category: "prime", country: "", state: "", city: "", area: "", pincode: "", latitude: "", longitude: "", landmark: "", address: "", description: "", imageUrl: "", images: "", amenities: "", policies: "", startingPrice: "", freeCancellation: false, breakfastIncluded: false, contactPhone: "", contactEmail: "" });
         queryClient.invalidateQueries({ queryKey: getListPartnerPropertiesQueryKey() });
       },
@@ -415,6 +418,9 @@ export default function PartnerProperties() {
                       <Button size="sm" variant="outline" className="text-xs" onClick={() => handleEditProperty(prop.id)}>
                         <Edit2 className="w-4 h-4 mr-1" /> Edit Info
                       </Button>
+                      <Button size="sm" variant="outline" className="text-xs" onClick={() => setAgreementPropertyId(prop.id)}>
+                        Property Docs / Agreement
+                      </Button>
                     </div>
                   </td>
                 </tr>
@@ -423,6 +429,16 @@ export default function PartnerProperties() {
           </table>
         </div>
       </div>
+
+      {/* Property Edit Dialog */}
+      <Dialog open={agreementPropertyId !== null} onOpenChange={open => { if (!open) setAgreementPropertyId(null); }}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader><DialogTitle>Sign and upload the property agreement</DialogTitle></DialogHeader>
+          {properties?.filter(prop => prop.id === agreementPropertyId).map(prop =>
+            <PartnerAgreement key={prop.id} propertyId={prop.id} propertyNumber={prop.propertyNumber} />,
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Property Edit Dialog */}
       <Dialog open={propDialogOpen} onOpenChange={(open) => {

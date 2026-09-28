@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { LocationFields } from "@/components/LocationFields";
 import { AgentLayout } from "@/components/layout/AgentLayout";
+import { AgentAgreement } from "@/components/agent/AgentAgreement";
 import { 
   useListAgentSubmittedProperties, 
   getListAgentSubmittedPropertiesQueryKey,
@@ -64,6 +65,7 @@ export default function AgentProperties() {
     }, {
       onSuccess: () => {
         toast.success("Property submitted for approval");
+        toast.info("Download, sign and upload the hotel agreement in Agent Docs below.");
         setRegisterOpen(false);
         setRegForm({
           name: "", category: "prime", country: "", state: "", city: "", area: "", pincode: "",
@@ -78,6 +80,9 @@ export default function AgentProperties() {
 
   return (
     <AgentLayout title="Submitted Properties">
+      {me?.role === "agent" && <AgentAgreement agentId={me.id} properties={(properties ?? []).map(property => ({
+        id: property.id, name: property.name,
+      }))} />}
       <div className="mb-6 flex flex-col md:flex-row md:items-center gap-4 justify-between">
         <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 flex-1">
           <h4 className="text-secondary font-bold mb-1">Submit a new property lead</h4>

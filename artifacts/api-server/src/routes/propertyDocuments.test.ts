@@ -1,4 +1,6 @@
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
+import { execFileSync } from "node:child_process";
+import { writeFile } from "node:fs/promises";
 import { Readable } from "node:stream";
 import express from "express";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
@@ -7,6 +9,7 @@ import sharp from "sharp";
 import { PDFDocument, PDFName } from "pdf-lib";
 import {
   db,
+  partnerProfilesTable,
   propertiesTable,
   propertyDocumentsTable,
   propertyDocumentUploadGrantsTable,
@@ -14,6 +17,15 @@ import {
   usersTable,
   type User,
 } from "@workspace/db";
+
+// This is the legacy admin portal credential, not a Clerk session. Set it
+// before the router's dynamic import so the admin guard derives this test key.
+process.env.ADMIN_USERNAME = "property-document-test-admin";
+process.env.ADMIN_PASSWORD = "property-document-test-password";
+process.env.SESSION_SECRET = "property-document-test-session";
+const testAdminToken = createHash("sha256").update(
+  `${process.env.ADMIN_USERNAME}:${process.env.ADMIN_PASSWORD}:${process.env.SESSION_SECRET}`,
+).digest("hex");
 
 const authState = vi.hoisted(() => ({
   user: null as User | null,
@@ -107,13 +119,15 @@ const suffix = `${process.pid}-${Date.now()}`;
 const adminId = `property-doc-test-admin-${suffix}`;
 const employeeAId = `property-doc-test-employee-a-${suffix}`;
 const employeeBId = `property-doc-test-employee-b-${suffix}`;
+const partnerId = `property-doc-test-partner-${suffix}`;
+const otherPartnerId = `property-doc-test-partner-other-${suffix}`;
 let propertyId = 0;
 let router: express.Router;
 let storageRouter: express.Router;
 
 function user(
   id: string,
-  role: "admin" | "employee",
+  role: "admin" | "employee" | "partner",
   emailPrefix: string,
 ): typeof usersTable.$inferInsert {
   return {
@@ -221,6 +235,8 @@ beforeAll(async () => {
       user(adminId, "admin", "property-document-admin"),
       user(employeeAId, "employee", "property-document-employee-a"),
       user(employeeBId, "employee", "property-document-employee-b"),
+      user(partnerId, "partner", "property-document-partner"),
+      user(otherPartnerId, "partner", "property-document-other-partner"),
     ])
     .returning();
   const [property] = await db
@@ -241,6 +257,7 @@ beforeAll(async () => {
       policies: [],
       startingPrice: 100,
       status: "active",
+      ownerId: partnerId,
     })
     .returning();
   propertyId = property!.id;
@@ -269,6 +286,197 @@ afterAll(async () => {
   );
   await db.delete(usersTable).where(eq(usersTable.id, employeeAId));
   await db.delete(usersTable).where(eq(usersTable.id, employeeBId));
+  await db.delete(usersTable).where(eq(usersTable.id, partnerId));
+  await db.delete(usersTable).where(eq(usersTable.id, otherPartnerId));
+});
+
+describe("partner agreement and private Property Docs", () => {
+  it("requires a partner-owned property for download and signed document upload", async () => {
+    const pdfPath = `/partner/properties/${propertyId}/agreement`;
+    setUser(null);
+    expect((await request(appWith(router), pdfPath)).status).toBe(401);
+    setUser((await db.select().from(usersTable).where(eq(usersTable.id, otherPartnerId)))[0]!);
+    expect((await request(appWith(router), pdfPath)).status).toBe(404);
+    const denied = await request(appWith(router), "/partner/property-documents/upload-intents", {
+      method: "POST",
+      body: JSON.stringify({ propertyId, originalName: "signed-hotel-agreement-1.pdf", originalBytes: 100, contentType: "application/pdf" }),
+    });
+    expect(denied.status).toBe(403);
+    setUser((await db.select().from(usersTable).where(eq(usersTable.id, partnerId)))[0]!);
+    const pdf = await request(appWith(router), pdfPath);
+    expect(pdf.status).toBe(200);
+    const pdfBytes = await pdf.arrayBuffer();
+    if (process.env.RENDER_PARTNER_AGREEMENT) {
+      await writeFile("/tmp/partner-agreement-review.pdf", Buffer.from(pdfBytes));
+    }
+    const generated = await PDFDocument.load(pdfBytes);
+    expect(generated.getPageCount()).toBeGreaterThan(5);
+    const wrongType = await request(appWith(router), "/partner/property-documents/upload-intents", {
+      method: "POST",
+      body: JSON.stringify({ propertyId, originalName: "signed-hotel-agreement-1.jpg", originalBytes: 100, contentType: "image/jpeg" }),
+    });
+    expect(wrongType.status).toBe(400);
+    const signed = await validPdf();
+    const created = await request(appWith(router), "/partner/property-documents/upload-intents", {
+      method: "POST",
+      body: JSON.stringify({
+        propertyId, originalName: "signed-hotel-agreement-1.pdf",
+        originalBytes: signed.length, contentType: "application/pdf",
+      }),
+    });
+    expect(created.status).toBe(201);
+    const intent = await created.json() as { intentId: string };
+    const uploaded = await request(appWith(router), `/partner/property-documents/upload-intents/${intent.intentId}/content`, {
+      method: "PUT",
+      headers: { "content-type": "application/pdf" },
+      body: signed,
+    });
+    expect(uploaded.status).toBe(201);
+    const finalized = await request(appWith(router), `/partner/property-documents/upload-intents/${intent.intentId}/finalize`, {
+      method: "POST", body: "{}",
+    });
+    expect(finalized.status).toBe(200);
+    const document = await finalized.json() as { id: string; propertyId: number; status: string };
+    expect(document.propertyId).toBe(propertyId);
+    expect(document.status).toBe("pending");
+    const own = await request(appWith(router), `/partner/property-documents?propertyId=${propertyId}`);
+    expect(((await own.json()) as Array<{id: string}>).some(row => row.id === document.id)).toBe(true);
+    setUser((await db.select().from(usersTable).where(eq(usersTable.id, otherPartnerId)))[0]!);
+    expect((await request(appWith(router), `/partner/property-documents/${document.id}/download`)).status).toBe(404);
+    setUser((await db.select().from(usersTable).where(eq(usersTable.id, adminId)))[0]!);
+    expect((await request(appWith(router), `/admin/property-documents?propertyId=${propertyId}`)).status).toBe(200);
+  }, 30000);
+});
+
+describe("agent agreement admin portal credential", () => {
+  it("accepts the same scoped admin bearer as Property Docs without Clerk and rejects missing/invalid credentials", async () => {
+    setUser(null);
+    const list = "/admin/agent-agreement-documents";
+    expect((await request(appWith(router), list)).status).toBe(401);
+    expect((await request(appWith(router), list, {
+      headers: { authorization: "Bearer invalid" },
+    })).status).toBe(401);
+    const bearer = { authorization: `Bearer ${testAdminToken}` };
+    const result = await request(appWith(router), list, { headers: bearer });
+    expect(result.status).toBe(200);
+    expect(Array.isArray(await result.json())).toBe(true);
+    expect((await request(appWith(router),
+      `/admin/agent-agreement-documents/${randomUUID()}/download`, { headers: bearer })).status).toBe(404);
+    expect((await request(appWith(router),
+      `/admin/agent-agreement-documents/${randomUUID()}/review`,
+      { headers: bearer, method: "POST", body: JSON.stringify({ status: "approved" }) })).status).toBe(409);
+  });
+
+  it("downloads partner and agent templates with their own references only for authorized admins", async () => {
+    setUser(null);
+    const agentId = `admin-agreement-agent-${randomUUID()}`;
+    let agentPropertyId: number | null = null;
+    try {
+      await db.insert(usersTable).values({
+        id: agentId, name: "Agreement Agent", email: `${agentId}@example.test`,
+        role: "agent", status: "active", approvalStatus: "approved",
+      });
+      const [agentProperty] = await db.insert(propertiesTable).values({
+        ownerId: agentId, name: "Agent Test Hotel", category: "budget",
+        city: "Test City", area: "Test Area", address: "Test Address",
+        description: "Agreement test", imageUrl: "https://example.test/agent-hotel.jpg",
+        startingPrice: 100, status: "pending", contactEmail: "hotel.agent@example.test",
+        contactPhone: "+91 4444444444",
+      }).returning();
+      agentPropertyId = agentProperty.id;
+      await db.insert(partnerProfilesTable).values({
+        userId: partnerId, businessName: "Registered Partner Pvt Ltd",
+        address: "8 Registered Lane", gstNumber: "GST-TEST-123",
+        contactPhone: "+91 3333333333",
+      });
+      await db.update(usersTable).set({ name: "Partner Owner" }).where(eq(usersTable.id, partnerId));
+      await db.update(propertiesTable).set({
+        contactEmail: "hotel.partner@example.test", contactPhone: "+91 2222222222",
+      }).where(eq(propertiesTable.id, propertyId));
+      const partnerPath = `/admin/partners/${partnerId}/properties/${propertyId}/agreement`;
+      const agentPath = `/admin/agents/${encodeURIComponent(agentId)}/agreement`;
+      expect((await request(appWith(router), partnerPath)).status).toBe(401);
+      expect((await request(appWith(router), agentPath)).status).toBe(401);
+      const headers = { authorization: `Bearer ${testAdminToken}` };
+      const partnerPdf = await request(appWith(router), partnerPath, { headers });
+      expect(partnerPdf.status).toBe(200);
+      const partnerBytes = Buffer.from(await partnerPdf.arrayBuffer());
+      if (process.env.RENDER_PARTNER_AGREEMENT) {
+        await writeFile("/tmp/partner-agreement-filled-review.pdf", partnerBytes);
+      }
+      const [partnerProperty] = await db.select().from(propertiesTable).where(eq(propertiesTable.id, propertyId));
+      const partnerText = execFileSync("pdftotext", ["-", "-"], {
+        input: partnerBytes,
+      }).toString();
+      expect(partnerText).toContain(`PM-${String(partnerProperty.propertyNumber).padStart(4, "0")}`);
+      expect(partnerText).toContain(partnerProperty.name);
+      expect(partnerText).toContain("Legal Entity Name: Registered Partner Pvt Ltd");
+      expect(partnerText).toContain("Registered Address: 8 Registered Lane");
+      expect(partnerText).toContain("Property Address: 1 Test Street, Test Area, Test City, Test State, 000000, India");
+      expect(partnerText).toContain("Authorized Representative: Partner Owner");
+      expect(partnerText).toContain("Email: hotel.partner@example.test");
+      expect(partnerText).toContain("Phone: +91 3333333333");
+      expect(partnerText).toContain("GST/VAT/Tax Registration No.: GST-TEST-123");
+      expect(partnerText).toContain("Business Registration No.:");
+      expect(partnerText).not.toContain("Business Registration No.: [Insert Number]");
+      expect(partnerText).toContain("Designation:");
+      expect(partnerText).not.toContain("Designation: [Insert Designation]");
+      // These are StayBestt's platform placeholders, not the hotel's details.
+      expect(partnerText).toContain("Registered Address: [Insert Address]");
+      expect(partnerText).toContain("Email: [Insert Email]");
+      expect(partnerText).toContain("Phone: [Insert Phone Number]");
+      setUser((await db.select().from(usersTable).where(eq(usersTable.id, partnerId)))[0]!);
+      const selfPartnerPdf = await request(appWith(router), `/partner/properties/${propertyId}/agreement`);
+      expect(selfPartnerPdf.status).toBe(200);
+      expect(execFileSync("pdftotext", ["-", "-"], {
+        input: Buffer.from(await selfPartnerPdf.arrayBuffer()),
+      }).toString()).toContain("Legal Entity Name: Registered Partner Pvt Ltd");
+      setUser(null);
+      expect((await request(appWith(router),
+        `/admin/partners/${agentId}/properties/${propertyId}/agreement`, { headers })).status).toBe(404);
+      const agentPdf = await request(appWith(router), agentPath, { headers });
+      expect(agentPdf.status).toBe(200);
+      const agentAccountText = execFileSync("pdftotext", ["-", "-"], {
+        input: Buffer.from(await agentPdf.arrayBuffer()),
+      }).toString();
+      expect(agentAccountText).toContain(agentId);
+      expect(agentAccountText).toContain("Authorized Representative: Agreement Agent");
+      expect(agentAccountText).toContain(`Email: ${agentId}@example.test`);
+      expect(agentAccountText).toContain("Legal Entity Name:");
+      expect(agentAccountText).not.toContain("Legal Entity Name: Registered Partner Pvt Ltd");
+      expect(agentAccountText).not.toContain("Property Address: Test Address");
+      expect(agentAccountText).not.toContain("Legal Entity Name: [Insert Legal Entity Name]");
+      expect(agentAccountText).toContain("Registered Address: [Insert Address]");
+      const propertyPdf = await request(appWith(router),
+        `${agentPath}?propertyId=${agentPropertyId}`, { headers });
+      expect(propertyPdf.status).toBe(200);
+      const propertyText = execFileSync("pdftotext", ["-", "-"], {
+        input: Buffer.from(await propertyPdf.arrayBuffer()),
+      }).toString();
+      expect(propertyText).toContain(agentId);
+      expect(propertyText).toContain("Agent Test Hotel");
+      expect(propertyText).toContain("Property Address: Test Address, Test Area, Test City");
+      expect(propertyText).toContain("Email: hotel.agent@example.test");
+      expect(propertyText).toContain("Phone: +91 4444444444");
+      expect(propertyText).not.toContain("GST-TEST-123");
+      setUser((await db.select().from(usersTable).where(eq(usersTable.id, agentId)))[0]!);
+      const selfAgentPdf = await request(appWith(router), `/agent/agreement?propertyId=${agentPropertyId}`);
+      expect(selfAgentPdf.status).toBe(200);
+      expect(execFileSync("pdftotext", ["-", "-"], {
+        input: Buffer.from(await selfAgentPdf.arrayBuffer()),
+      }).toString()).toContain("Email: hotel.agent@example.test");
+      setUser(null);
+      expect((await request(appWith(router),
+        `${agentPath}?propertyId=${propertyId}`, { headers })).status).toBe(404);
+    } finally {
+      await db.delete(partnerProfilesTable).where(eq(partnerProfilesTable.userId, partnerId));
+      await db.update(usersTable).set({ name: "property-document-partner" }).where(eq(usersTable.id, partnerId));
+      await db.update(propertiesTable).set({ contactEmail: null, contactPhone: null })
+        .where(eq(propertiesTable.id, propertyId));
+      if (agentPropertyId) await db.delete(propertiesTable).where(eq(propertiesTable.id, agentPropertyId));
+      await db.delete(usersTable).where(eq(usersTable.id, agentId));
+    }
+  }, 30000);
 });
 
 describe("property document authorization and lifecycle", () => {
@@ -641,7 +849,7 @@ describe("property document compression and legacy path protection", () => {
     ).rejects.toThrow("Invalid image document");
   });
 
-  it("keeps valid PDFs readable and rejects real signatures and fake encryption tokens", async () => {
+  it("keeps valid PDFs readable, preserves signatures and rejects fake encryption tokens", async () => {
     const pdf = await validPdf();
     const optimized = await (await import("./propertyDocuments")).optimizeDocument(
       pdf,
@@ -672,9 +880,16 @@ describe("property document compression and legacy path protection", () => {
     );
     page.node.set(PDFName.of("Annots"), signedPdf.context.obj([widget]));
     const signed = Buffer.from(await signedPdf.save());
-    await expect(optimizeDocument(signed, "application/pdf")).rejects.toThrow(
-      "Signed PDFs are not supported",
-    );
+    expect((await optimizeDocument(signed, "application/pdf")).equals(signed)).toBe(true);
+    const activeSigned = await PDFDocument.create();
+    activeSigned.addPage([240, 180]);
+    activeSigned.catalog.set(PDFName.of("OpenAction"), activeSigned.context.obj({
+      S: PDFName.of("JavaScript"),
+      JS: "app.alert('no')",
+    }));
+    activeSigned.context.register(activeSigned.context.obj({ Type: PDFName.of("Sig") }));
+    await expect(optimizeDocument(Buffer.from(await activeSigned.save()), "application/pdf"))
+      .rejects.toThrow("unsupported active content");
     const fakeEncrypted = Buffer.from("%PDF-1.7\n/Encrypt 7 0 R\nnot a PDF");
     await expect(optimizeDocument(fakeEncrypted, "application/pdf")).rejects.toThrow(
       "Invalid PDF document",

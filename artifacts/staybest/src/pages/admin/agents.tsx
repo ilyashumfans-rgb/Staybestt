@@ -19,8 +19,10 @@ import {
   type AdminAgentDetail,
   type AgentLifecycleEvent,
   type CommercialTermEvent,
-  type PropertyReviewEvent
+  type PropertyReviewEvent,
+  customFetch,
 } from "@workspace/api-client-react";
+import { AdminAgreementDownloads, type SignedAgreement } from "@/components/property-documents/AdminAgreementDownloads";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -230,6 +232,18 @@ function MetricCard({ title, value, icon, highlight = false }: { title: string, 
 function AgentDetail({ agentId, onBack }: { agentId: string, onBack: () => void }) {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('overview');
+  const [signedAgreements, setSignedAgreements] = useState<(SignedAgreement & { agentId: string })[]>([]);
+  const [agreementError, setAgreementError] = useState(false);
+  useEffect(() => {
+    let live = true;
+    setSignedAgreements([]);
+    setAgreementError(false);
+    customFetch<(SignedAgreement & { agentId: string })[]>("/api/admin/agent-agreement-documents", {
+      credentials: "same-origin", responseType: "json",
+    }).then(rows => { if (live) setSignedAgreements(rows.filter(row => row.agentId === agentId)); })
+      .catch(() => { if (live) setAgreementError(true); });
+    return () => { live = false; };
+  }, [agentId]);
   
   const { data: agent, isLoading } = useGetAdminAgent(agentId, {
     query: {
@@ -374,6 +388,13 @@ function AgentDetail({ agentId, onBack }: { agentId: string, onBack: () => void 
           </div>
         </div>
       </div>
+
+      <section className="bg-white border rounded-xl p-5 space-y-2">
+        <h3 className="font-bold">Agent agreements</h3>
+        {agreementError && <p className="text-destructive text-sm">Could not load signed agreements.</p>}
+        <AdminAgreementDownloads ownerId={agentId} role="agent" properties={agent.properties}
+          signed={signedAgreements} />
+      </section>
 
       <div className="border-b flex overflow-x-auto hide-scrollbar">
         {tabs.map(tab => (

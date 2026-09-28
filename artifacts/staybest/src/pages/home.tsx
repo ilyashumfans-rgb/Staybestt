@@ -5,7 +5,6 @@ import { PropertyCard } from "@/components/property/PropertyCard";
 import { Link } from "wouter";
 import { ArrowRight, TicketPercent, Star, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { BrandLogo } from "@/components/BrandLogo";
 import hero3dHome from "@/assets/hero-3d-home.png";
 
 export default function Home() {
@@ -25,11 +24,6 @@ export default function Home() {
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-8 items-center mb-12">
             {/* Copy */}
             <div className="max-w-2xl">
-              <BrandLogo
-                variant="horizontal"
-                alt="StayBest — Choose your own Space"
-                className="h-10 md:h-12 mb-8 animate-slide-up-fade opacity-0"
-              />
               <h1 className="text-4xl md:text-6xl lg:text-7xl font-serif text-secondary font-bold mb-6 tracking-tight leading-[1.08] animate-slide-up-fade delay-100 opacity-0">
                 Find Your <span className="text-primary italic">Perfect</span> Stay, Every&nbsp;Time.
               </h1>

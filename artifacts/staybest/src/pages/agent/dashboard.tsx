@@ -33,6 +33,11 @@ export default function AgentDashboard() {
       <div className="mb-8">
         <h2 className="text-xl font-bold text-secondary mb-2">Welcome back, {me?.name || 'Agent'}</h2>
         <p className="text-muted-foreground">Here is a summary of your performance and earnings.</p>
+        <p className="mt-2 text-sm text-muted-foreground">
+          <Link href="/agent/properties" className="text-primary underline font-medium">
+            Download, sign and upload the hotel agreement in Agent Docs
+          </Link> — even before submitting a property.
+        </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">

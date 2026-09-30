@@ -63,8 +63,7 @@ export default function SignInPage() {
   }, [logoMotion]);
   const router = useRouter();
 
-  const [emailAddress, setEmailAddress] = useState('');
-  const [usernameMode, setUsernameMode] = useState(false);
+  const [identifier, setIdentifier] = useState('');
   const [loginError, setLoginError] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -94,14 +93,16 @@ export default function SignInPage() {
 
     try {
       setLoginError('');
-      if (usernameMode) {
+      const enteredIdentifier = identifier.trim();
+      if (!enteredIdentifier || !password) return;
+      if (!enteredIdentifier.includes('@')) {
         const domain = process.env.EXPO_PUBLIC_DOMAIN?.trim();
         if (!domain) throw new Error('StayBest API domain is not configured.');
         const origin = /^https?:\/\//i.test(domain) ? domain.replace(/\/+$/, '') : `https://${domain.replace(/\/+$/, '')}`;
         const response = await fetch(`${origin}/api/customer/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username: emailAddress.trim(), password }),
+          body: JSON.stringify({ username: enteredIdentifier, password }),
         });
         if (!response.ok) {
           const body = await response.json().catch(() => null);
@@ -119,7 +120,7 @@ export default function SignInPage() {
         return;
       }
       const { error } = await signIn.password({
-        emailAddress,
+        emailAddress: enteredIdentifier,
         password,
       });
 
@@ -221,11 +222,6 @@ export default function SignInPage() {
         </View>
 
         <View style={styles.form}>
-          <Pressable onPress={() => { setUsernameMode(!usernameMode); setEmailAddress(''); setLoginError(''); }} accessibilityRole="button">
-            <ThemedText style={{ color: colors.primary, textAlign: 'center' }}>
-              {usernameMode ? 'Use email instead' : 'Have a customer username? Sign in with username'}
-            </ThemedText>
-          </Pressable>
           <View style={styles.inputWrapper}>
             <View style={[
               styles.inputContainer,
@@ -235,11 +231,15 @@ export default function SignInPage() {
               <TextInput
                 style={[styles.input, { color: colors.foreground }]}
                 autoCapitalize="none"
-                value={emailAddress}
-                placeholder={usernameMode ? "Username" : "Email address"}
+                autoCorrect={false}
+                autoComplete="username"
+                accessibilityLabel="Email or username"
+                testID="sign-in-identifier"
+                value={identifier}
+                placeholder="Email or username"
                 placeholderTextColor={colors.mutedForeground}
-                onChangeText={setEmailAddress}
-                keyboardType="email-address"
+                onChangeText={setIdentifier}
+                keyboardType="default"
               />
             </View>
             {hasAttemptedSignIn && getError('identifier') ? <ThemedText type="caption" color={colors.destructive} style={styles.errorText}>{getError('identifier')}</ThemedText> : null}
@@ -257,6 +257,10 @@ export default function SignInPage() {
                 placeholder="Password"
                 placeholderTextColor={colors.mutedForeground}
                 secureTextEntry={!showPassword}
+                autoCapitalize="none"
+                autoCorrect={false}
+                autoComplete="password"
+                accessibilityLabel="Password"
                 onChangeText={setPassword}
               />
               <Pressable
@@ -277,7 +281,7 @@ export default function SignInPage() {
 
           {hasAttemptedSignIn && hasErrors && !getError('identifier') && !getError('password') ? (
             <ThemedText type="caption" color={colors.destructive} style={styles.errorText}>
-              Invalid email or password.
+              Could not sign in. Check your email or username and password.
             </ThemedText>
           ) : null}
           {loginError ? <ThemedText type="caption" color={colors.destructive}>{loginError}</ThemedText> : null}
@@ -286,11 +290,11 @@ export default function SignInPage() {
             style={({ pressed }) => [
               styles.primaryBtn,
               { backgroundColor: colors.primary },
-              (!emailAddress || !password || fetchStatus === 'fetching') && { opacity: 0.5, shadowOpacity: 0 },
+              (!identifier.trim() || !password || fetchStatus === 'fetching') && { opacity: 0.5, shadowOpacity: 0 },
               pressed && { opacity: 0.8 },
             ]}
             onPress={handleSubmit}
-            disabled={!emailAddress || !password || fetchStatus === 'fetching'}
+            disabled={!identifier.trim() || !password || fetchStatus === 'fetching'}
           >
             <ThemedText weight="bold" color="#fff" style={styles.primaryBtnText}>Log In</ThemedText>
           </Pressable>

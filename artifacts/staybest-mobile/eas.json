@@ -9,6 +9,7 @@
       "node": "22.22.0",
       "pnpm": "10.26.1",
       "android": {
+        "image": "ubuntu-24.04-jdk-17-ndk-r27b",
         "buildType": "apk"
       },
       "ios": {
@@ -23,6 +24,7 @@
       "node": "22.22.0",
       "pnpm": "10.26.1",
       "android": {
+        "image": "ubuntu-24.04-jdk-17-ndk-r27b",
         "buildType": "app-bundle"
       },
       "ios": {

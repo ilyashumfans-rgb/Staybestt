@@ -1,10 +1,11 @@
 import React, { useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { Platform } from 'react-native';
+import { Platform, View, Text } from 'react-native';
+import Constants from 'expo-constants';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { ErrorBoundary, StartupErrorBoundary } from '@/components/ErrorBoundary';
 import {
   PlayfairDisplay_400Regular,
   PlayfairDisplay_600SemiBold,
@@ -32,7 +33,7 @@ import { getSecureItem, setSecureItem } from '@/utils/secureStorage';
 configureForegroundNotifications();
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
-SplashScreen.preventAutoHideAsync();
+SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
 setBaseUrl(`https://${process.env.EXPO_PUBLIC_DOMAIN}`);
 
@@ -99,7 +100,14 @@ function RootLayoutNav() {
   );
 }
 
+const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY ||
+  Constants.expoConfig?.extra?.clerkPublishableKey;
+
 export default function RootLayout() {
+  return <StartupErrorBoundary><ConfiguredRootLayout /></StartupErrorBoundary>;
+}
+
+function ConfiguredRootLayout() {
   const [fontsLoaded, fontError] = useFonts({
     PlayfairDisplay_400Regular,
     PlayfairDisplay_600SemiBold,
@@ -112,14 +120,23 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (fontsLoaded || fontError) {
-      SplashScreen.hideAsync();
+      SplashScreen.hideAsync().catch(() => undefined);
     }
   }, [fontsLoaded, fontError]);
 
   if (Platform.OS !== 'web' && !fontsLoaded && !fontError) return null;
 
+  if (typeof publishableKey !== 'string' || !/^pk_(test|live)_[A-Za-z0-9+/=]+$/.test(publishableKey)) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24, backgroundColor: '#fff' }}>
+        <Text style={{ fontSize: 22, fontWeight: '700', marginBottom: 12 }}>StayBest update required</Text>
+        <Text style={{ textAlign: 'center' }}>This app build is missing its sign-in configuration. Please install the latest update or contact StayBest support.</Text>
+      </View>
+    );
+  }
+
   return (
-    <ClerkProvider publishableKey={process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!} tokenCache={tokenCache}>
+    <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
       <AuthSetup>
         <SafeAreaProvider>
           <ErrorBoundary>

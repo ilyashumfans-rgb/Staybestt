@@ -341,13 +341,12 @@ export default function ExploreScreen() {
         </View>
 
         {/* Hero Section */}
-        <View style={styles.heroSection}>
-          <LinearGradient
-            colors={['#fff8f2', '#ffffff']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={StyleSheet.absoluteFill}
-          />
+        <LinearGradient
+          colors={['#fff8f2', '#ffffff']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.heroSection}
+        >
           <View style={styles.heroContent}>
             <View style={styles.heroEyebrow}>
               <View style={styles.heroEyebrowDot} />
@@ -384,7 +383,7 @@ export default function ExploreScreen() {
               )}
             </View>
           </View>
-        </View>
+        </LinearGradient>
 
         {/* Floating Search Card */}
         <View style={styles.searchCard}>
@@ -661,7 +660,7 @@ export default function ExploreScreen() {
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.trustScroll}>
             {[
               { id: 'best', icon: 'award', title: 'Best Price Guarantee', color: '#ea580c' },
-              { id: 'secure', icon: 'shield-check', title: 'Secure Bookings', color: '#16a34a' },
+              { id: 'secure', icon: 'shield-alt', title: 'Secure Bookings', color: '#16a34a' },
               { id: 'support', icon: 'headset', title: '24/7 Support', color: '#2563eb' },
               { id: 'cancel', icon: 'undo-alt', title: 'Easy Cancellation', color: '#7c3aed' },
             ].map((trust, i) => (
@@ -898,8 +897,10 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   heroContent: {
-    flex: 1.15,
-    zIndex: 2,
+    flexGrow: 1.15,
+    flexShrink: 1,
+    flexBasis: 0,
+    minWidth: 0,
     paddingRight: 12,
   },
   heroEyebrow: {
@@ -927,7 +928,10 @@ const styles = StyleSheet.create({
     fontSize: 12.5, color: '#64748b', lineHeight: 18,
   },
   heroImageWrapper: {
-    flex: 0.85,
+    flexGrow: 0.85,
+    flexShrink: 1,
+    flexBasis: 0,
+    minWidth: 0,
     height: 140,
     marginRight: 12,
     shadowColor: '#0b1a30',
@@ -935,11 +939,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 10,
     elevation: 8,
-    transform: [
-      { perspective: 700 },
-      { rotateY: '-5deg' },
-      { rotateZ: '1deg' },
-    ],
   },
   heroImageFrame: {
     flex: 1,

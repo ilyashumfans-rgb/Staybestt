@@ -18,6 +18,7 @@ import {
   PlusJakartaSans_700Bold,
 } from '@expo-google-fonts/plus-jakarta-sans';
 import { useFonts } from 'expo-font';
+import { AntDesign, Feather, FontAwesome, FontAwesome5 } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { setBaseUrl, setAuthTokenGetter } from "@workspace/api-client-react";
@@ -108,6 +109,14 @@ export default function RootLayout() {
 }
 
 function ConfiguredRootLayout() {
+  // Load icon families before mounting any screen, not lazily as each icon
+  // appears. In particular, FontAwesome5 has separate regular/solid/brand files.
+  const [iconsLoaded, iconError] = useFonts({
+    ...Feather.font,
+    ...FontAwesome.font,
+    ...FontAwesome5.font,
+    ...AntDesign.font,
+  });
   const [fontsLoaded, fontError] = useFonts({
     PlayfairDisplay_400Regular,
     PlayfairDisplay_600SemiBold,
@@ -119,11 +128,15 @@ function ConfiguredRootLayout() {
   });
 
   useEffect(() => {
-    if (fontsLoaded || fontError) {
+    if (((fontsLoaded || fontError) && iconsLoaded) || iconError) {
       SplashScreen.hideAsync().catch(() => undefined);
     }
-  }, [fontsLoaded, fontError]);
+  }, [fontsLoaded, fontError, iconsLoaded, iconError]);
 
+  // Do not silently render missing-glyph boxes if an icon asset fails to load.
+  // The startup boundary provides an explicit error and retry instead.
+  if (iconError) throw iconError;
+  if (!iconsLoaded) return null;
   if (Platform.OS !== 'web' && !fontsLoaded && !fontError) return null;
 
   if (typeof publishableKey !== 'string' || !/^pk_(test|live)_[A-Za-z0-9+/=]+$/.test(publishableKey)) {

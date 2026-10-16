@@ -8,6 +8,198 @@
 import * as zod from 'zod/v4';
 
 
+export const GetPartnerAlertsConfigResponse = zod.object({
+  "publicKey": zod.string()
+})
+
+
+export const subscribePartnerAlertsBodyEndpointMax = 2048;
+
+export const subscribePartnerAlertsBodyKeysP256dhRegExp = new RegExp('^[A-Za-z0-9_-]{87}=?$');
+export const subscribePartnerAlertsBodyKeysAuthRegExp = new RegExp('^[A-Za-z0-9_-]{22}(==)?$');
+
+
+export const SubscribePartnerAlertsBody = zod.object({
+  "endpoint": zod.string().max(subscribePartnerAlertsBodyEndpointMax),
+  "keys": zod.object({
+  "p256dh": zod.string().regex(subscribePartnerAlertsBodyKeysP256dhRegExp),
+  "auth": zod.string().regex(subscribePartnerAlertsBodyKeysAuthRegExp)
+})
+})
+
+export const SubscribePartnerAlertsResponse = zod.unknown()
+
+
+export const unsubscribePartnerAlertsBodyEndpointMax = 2048;
+
+
+
+export const UnsubscribePartnerAlertsBody = zod.object({
+  "endpoint": zod.string().max(unsubscribePartnerAlertsBodyEndpointMax)
+})
+
+export const UnsubscribePartnerAlertsResponse = zod.unknown()
+
+
+export const ListPartnerBookingAlertsResponseItem = zod.object({
+  "id": zod.int(),
+  "bookingId": zod.int(),
+  "propertyName": zod.string(),
+  "bookingRef": zod.string().nullable(),
+  "checkIn": zod.string()
+})
+export const ListPartnerBookingAlertsResponse = zod.array(ListPartnerBookingAlertsResponseItem)
+
+
+
+
+
+export const ReadPartnerBookingAlertParams = zod.object({
+  "id": zod.coerce.number().int().min(1)
+})
+
+export const ReadPartnerBookingAlertResponse = zod.unknown()
+
+
+
+
+
+export const DeleteAmenityParams = zod.object({
+  "id": zod.coerce.number().int().min(1)
+})
+
+export const DeleteAmenityResponse = zod.object({
+  "categories": zod.array(zod.object({
+  "id": zod.int(),
+  "name": zod.string(),
+  "amenities": zod.array(zod.object({
+  "id": zod.int(),
+  "name": zod.string(),
+  "icon": zod.string()
+}))
+}))
+})
+
+
+export const GetAmenityCatalogResponse = zod.object({
+  "categories": zod.array(zod.object({
+  "id": zod.int(),
+  "name": zod.string(),
+  "amenities": zod.array(zod.object({
+  "id": zod.int(),
+  "name": zod.string(),
+  "icon": zod.string()
+}))
+}))
+})
+
+
+export const createAmenityCategoryBodyNameMax = 80;
+
+
+
+export const CreateAmenityCategoryBody = zod.object({
+  "name": zod.string().min(1).max(createAmenityCategoryBodyNameMax)
+})
+
+export const CreateAmenityCategoryResponse = zod.object({
+  "categories": zod.array(zod.object({
+  "id": zod.int(),
+  "name": zod.string(),
+  "amenities": zod.array(zod.object({
+  "id": zod.int(),
+  "name": zod.string(),
+  "icon": zod.string()
+}))
+}))
+})
+
+
+
+export const createAmenityBodyNameMax = 80;
+
+
+
+export const CreateAmenityBody = zod.object({
+  "categoryId": zod.int().min(1),
+  "name": zod.string().min(1).max(createAmenityBodyNameMax),
+  "icon": zod.enum(['pool', 'lawn', 'breakfast', 'wifi', 'theatre', 'bbq', 'bonfire', 'gazebo', 'games', 'bar', 'tv', 'music', 'balcony', 'ac', 'refrigerator', 'water', 'check'])
+})
+
+export const CreateAmenityResponse = zod.object({
+  "categories": zod.array(zod.object({
+  "id": zod.int(),
+  "name": zod.string(),
+  "amenities": zod.array(zod.object({
+  "id": zod.int(),
+  "name": zod.string(),
+  "icon": zod.string()
+}))
+}))
+})
+
+
+export const registerPartnerAccountBodyNameMin = 2;
+export const registerPartnerAccountBodyNameMax = 100;
+
+export const registerPartnerAccountBodyPhoneMin = 7;
+export const registerPartnerAccountBodyPhoneMax = 20;
+
+export const registerPartnerAccountBodyBusinessNameMin = 2;
+export const registerPartnerAccountBodyBusinessNameMax = 150;
+
+export const registerPartnerAccountBodyCityMin = 2;
+export const registerPartnerAccountBodyCityMax = 100;
+
+
+
+export const RegisterPartnerAccountBody = zod.object({
+  "name": zod.string().min(registerPartnerAccountBodyNameMin).max(registerPartnerAccountBodyNameMax),
+  "phone": zod.string().min(registerPartnerAccountBodyPhoneMin).max(registerPartnerAccountBodyPhoneMax),
+  "businessName": zod.string().min(registerPartnerAccountBodyBusinessNameMin).max(registerPartnerAccountBodyBusinessNameMax),
+  "city": zod.string().min(registerPartnerAccountBodyCityMin).max(registerPartnerAccountBodyCityMax)
+})
+
+export const RegisterPartnerAccountResponse = zod.object({
+  "username": zod.string(),
+  "password": zod.string(),
+  "message": zod.string()
+})
+
+
+export const ListPartnerApplicationsResponseItem = zod.object({
+  "id": zod.string(),
+  "username": zod.string(),
+  "name": zod.string(),
+  "phone": zod.string(),
+  "businessName": zod.string(),
+  "city": zod.string(),
+  "status": zod.string(),
+  "createdAt": zod.string()
+})
+export const ListPartnerApplicationsResponse = zod.array(ListPartnerApplicationsResponseItem)
+
+
+export const DecidePartnerApplicationParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const DecidePartnerApplicationBody = zod.object({
+  "status": zod.enum(['approved', 'rejected'])
+})
+
+export const DecidePartnerApplicationResponse = zod.object({
+  "id": zod.string(),
+  "username": zod.string(),
+  "name": zod.string(),
+  "phone": zod.string(),
+  "businessName": zod.string(),
+  "city": zod.string(),
+  "status": zod.string(),
+  "createdAt": zod.string()
+})
+
+
 /**
  * @summary Request a presigned URL for file upload
  */
@@ -827,12 +1019,23 @@ export const getBillingSettingsResponseOneAddressMax = 1000;
 
 export const getBillingSettingsResponseOneTaxRegistrationMax = 100;
 
+export const getBillingSettingsResponseOneEmailMax = 254;
+
+export const getBillingSettingsResponseOnePhoneMax = 30;
+
+export const getBillingSettingsResponseOneLogoUrlMax = 500;
+
+
+export const getBillingSettingsResponseOneLogoUrlRegExp = new RegExp('^/api/storage/objects/uploads/[a-zA-Z0-9-]+$');
 
 
 export const GetBillingSettingsResponse = zod.object({
   "businessName": zod.string().min(1).max(getBillingSettingsResponseOneBusinessNameMax),
   "address": zod.string().min(1).max(getBillingSettingsResponseOneAddressMax),
-  "taxRegistration": zod.string().max(getBillingSettingsResponseOneTaxRegistrationMax).nullable()
+  "taxRegistration": zod.string().max(getBillingSettingsResponseOneTaxRegistrationMax).nullable(),
+  "email": zod.email().max(getBillingSettingsResponseOneEmailMax).nullish(),
+  "phone": zod.string().max(getBillingSettingsResponseOnePhoneMax).nullish(),
+  "logoUrl": zod.string().max(getBillingSettingsResponseOneLogoUrlMax).regex(getBillingSettingsResponseOneLogoUrlRegExp).nullish()
 }).and(zod.object({
   "id": zod.int(),
   "updatedAt": zod.string()
@@ -848,12 +1051,23 @@ export const updateBillingSettingsBodyAddressMax = 1000;
 
 export const updateBillingSettingsBodyTaxRegistrationMax = 100;
 
+export const updateBillingSettingsBodyEmailMax = 254;
+
+export const updateBillingSettingsBodyPhoneMax = 30;
+
+export const updateBillingSettingsBodyLogoUrlMax = 500;
+
+
+export const updateBillingSettingsBodyLogoUrlRegExp = new RegExp('^/api/storage/objects/uploads/[a-zA-Z0-9-]+$');
 
 
 export const UpdateBillingSettingsBody = zod.object({
   "businessName": zod.string().min(1).max(updateBillingSettingsBodyBusinessNameMax),
   "address": zod.string().min(1).max(updateBillingSettingsBodyAddressMax),
-  "taxRegistration": zod.string().max(updateBillingSettingsBodyTaxRegistrationMax).nullish()
+  "taxRegistration": zod.string().max(updateBillingSettingsBodyTaxRegistrationMax).nullish(),
+  "email": zod.email().max(updateBillingSettingsBodyEmailMax).nullish(),
+  "phone": zod.string().max(updateBillingSettingsBodyPhoneMax).nullish(),
+  "logoUrl": zod.string().max(updateBillingSettingsBodyLogoUrlMax).regex(updateBillingSettingsBodyLogoUrlRegExp).nullish()
 })
 
 export const updateBillingSettingsResponseOneBusinessNameMax = 200;
@@ -862,12 +1076,23 @@ export const updateBillingSettingsResponseOneAddressMax = 1000;
 
 export const updateBillingSettingsResponseOneTaxRegistrationMax = 100;
 
+export const updateBillingSettingsResponseOneEmailMax = 254;
+
+export const updateBillingSettingsResponseOnePhoneMax = 30;
+
+export const updateBillingSettingsResponseOneLogoUrlMax = 500;
+
+
+export const updateBillingSettingsResponseOneLogoUrlRegExp = new RegExp('^/api/storage/objects/uploads/[a-zA-Z0-9-]+$');
 
 
 export const UpdateBillingSettingsResponse = zod.object({
   "businessName": zod.string().min(1).max(updateBillingSettingsResponseOneBusinessNameMax),
   "address": zod.string().min(1).max(updateBillingSettingsResponseOneAddressMax),
-  "taxRegistration": zod.string().max(updateBillingSettingsResponseOneTaxRegistrationMax).nullable()
+  "taxRegistration": zod.string().max(updateBillingSettingsResponseOneTaxRegistrationMax).nullable(),
+  "email": zod.email().max(updateBillingSettingsResponseOneEmailMax).nullish(),
+  "phone": zod.string().max(updateBillingSettingsResponseOnePhoneMax).nullish(),
+  "logoUrl": zod.string().max(updateBillingSettingsResponseOneLogoUrlMax).regex(updateBillingSettingsResponseOneLogoUrlRegExp).nullish()
 }).and(zod.object({
   "id": zod.int(),
   "updatedAt": zod.string()

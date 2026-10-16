@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation, Link } from "wouter";
-import { LayoutDashboard, Building2, CalendarCheck, Tags, LogOut, ArrowLeft, Users, Store, UserRound, BriefcaseBusiness, BarChart3, FileText, TicketPercent, MapPin, Images, Wallet, Contact, Menu, Receipt } from "lucide-react";
+import { LayoutDashboard, Building2, CalendarCheck, Tags, LogOut, ArrowLeft, Users, Store, UserRound, BriefcaseBusiness, BarChart3, FileText, TicketPercent, MapPin, Images, Wallet, Contact, Menu, Receipt, Sparkles } from "lucide-react";
 import { BrandLogo } from "@/components/BrandLogo";
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetHeader } from "@/components/ui/sheet";
@@ -37,6 +37,7 @@ export function AdminLayout({ children, title }: AdminLayoutProps) {
     { href: "/admin/properties", label: "Properties", icon: Building2 },
     { href: "/admin/property-documents", label: "Property Docs", icon: FileText },
     { href: "/admin/property-categories", label: "Property Categories", icon: Tags },
+    { href: "/admin/amenities", label: "Amenities", icon: Sparkles },
     { href: "/admin/locations", label: "Locations", icon: MapPin },
     { href: "/admin/destinations", label: "Destinations", icon: MapPin },
     { href: "/admin/offers", label: "Offers", icon: Tags },

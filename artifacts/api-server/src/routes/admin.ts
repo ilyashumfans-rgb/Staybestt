@@ -2074,7 +2074,7 @@ router.get("/admin/vendors/credentials", async (_req, res): Promise<void> => {
         userId: r.userId,
         email: r.email,
         name: r.name,
-        password: r.password ?? null,
+        password: r.password === "clerk-managed:one-time" ? null : r.password ?? null,
         updatedAt: r.updatedAt ? r.updatedAt.toISOString() : null,
       })),
     ),
@@ -2115,12 +2115,14 @@ router.post("/admin/vendors/:id/password", async (req, res): Promise<void> => {
     res.status(500).json({ message: msg });
     return;
   }
+  const storedPassword = vendor.preferences.partnerRegistration ? "clerk-managed:one-time" : password;
+  res.set("Cache-Control", "no-store");
   await db
     .insert(vendorCredentialsTable)
-    .values({ userId: vendor.id, password, updatedAt: new Date() })
+    .values({ userId: vendor.id, password: storedPassword, updatedAt: new Date() })
     .onConflictDoUpdate({
       target: vendorCredentialsTable.userId,
-      set: { password, updatedAt: new Date() },
+      set: { password: storedPassword, updatedAt: new Date() },
     });
   res.json(
     SetVendorPasswordResponse.parse({ email: vendor.email, password, name: vendor.name }),

@@ -31,6 +31,7 @@ import AdminPropertyDocuments from '@/pages/admin/property-documents';
 import AdminLocations from '@/pages/admin/locations';
 import AdminDestinations from '@/pages/admin/destinations';
 import AdminPropertyCategories from '@/pages/admin/property-categories';
+import AdminAmenities from '@/pages/admin/amenities';
 import AdminRooms from '@/pages/admin/rooms';
 import AdminOffers from '@/pages/admin/offers';
 import AdminPromoBanners from '@/pages/admin/promo-banners';
@@ -50,6 +51,7 @@ import ProfilePage from '@/pages/profile';
 
 // Partner Pages
 import PartnerLanding from '@/pages/partner/landing';
+import PartnerRegister from '@/pages/partner/register';
 import PartnerDashboard from '@/pages/partner/dashboard';
 import PartnerBookings from '@/pages/partner/bookings';
 import PartnerProperties from '@/pages/partner/properties';
@@ -256,6 +258,7 @@ function Router() {
       <Route path="/admin/locations" component={AdminLocations} />
       <Route path="/admin/destinations" component={AdminDestinations} />
       <Route path="/admin/property-categories" component={AdminPropertyCategories} />
+      <Route path="/admin/amenities" component={AdminAmenities} />
       <Route path="/admin/properties/:id/rooms" component={AdminRooms} />
       <Route path="/admin/offers" component={AdminOffers} />
       <Route path="/admin/promo-banners" component={AdminPromoBanners} />
@@ -274,6 +277,7 @@ function Router() {
       <Route path="/admin/commissions" component={AdminCommissions} />
 
       {/* Partner Routes */}
+      <Route path="/partners/register" component={PartnerRegister} />
       <Route path="/partners" component={PartnerLanding} />
       <Route path="/partner" component={PartnerDashboard} />
       <Route path="/partner/bookings" component={PartnerBookings} />

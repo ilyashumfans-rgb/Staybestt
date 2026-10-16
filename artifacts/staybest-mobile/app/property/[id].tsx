@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
-import { StyleSheet, View, Pressable, ScrollView, Platform, Dimensions, Share } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { StyleSheet, View, Pressable, ScrollView, Platform, Dimensions, Share, Modal, Alert } from 'react-native';
 import { Image } from 'expo-image';
 import { useColors } from '@/hooks/useColors';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
-import { useGetProperty, getGetPropertyQueryKey } from '@workspace/api-client-react';
+import { Feather, FontAwesome5 } from '@expo/vector-icons';
+import { useGetProperty, getGetPropertyQueryKey, useGetAmenityCatalog, groupSelectedAmenities } from '@workspace/api-client-react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { getImageUrl } from '@/utils/images';
 import { HeartButton } from '@/components/HeartButton';
@@ -14,6 +14,25 @@ import Animated from 'react-native-reanimated';
 import { PropertyMap } from '@/components/PropertyMap';
 
 const { width } = Dimensions.get('window');
+
+type IconDef = { lib: 'feather'; name: React.ComponentProps<typeof Feather>['name'] } | { lib: 'fa'; name: string };
+const AMENITY_ICON: Record<string, IconDef> = {
+  pool: { lib: 'fa', name: 'swimming-pool' }, lawn: { lib: 'fa', name: 'tree' }, breakfast: { lib: 'feather', name: 'coffee' },
+  wifi: { lib: 'feather', name: 'wifi' }, theatre: { lib: 'feather', name: 'film' }, bbq: { lib: 'fa', name: 'drumstick-bite' },
+  bonfire: { lib: 'fa', name: 'fire' }, gazebo: { lib: 'fa', name: 'campground' }, games: { lib: 'fa', name: 'gamepad' },
+  bar: { lib: 'fa', name: 'glass-martini-alt' }, tv: { lib: 'feather', name: 'tv' }, music: { lib: 'feather', name: 'music' },
+  balcony: { lib: 'fa', name: 'building' }, ac: { lib: 'feather', name: 'wind' }, refrigerator: { lib: 'fa', name: 'snowflake' },
+  water: { lib: 'feather', name: 'droplet' }, check: { lib: 'feather', name: 'check' },
+};
+
+function AmenityGlyph({ icon, color }: { icon: string; color: string }) {
+  const def = AMENITY_ICON[icon] ?? AMENITY_ICON.check;
+  return (
+    <View style={[styles.iconCircle, { borderColor: color + '55' }]}>
+      {def.lib === 'feather' ? <Feather name={def.name} size={15} color={color} /> : <FontAwesome5 name={def.name} size={13} color={color} />}
+    </View>
+  );
+}
 
 export default function PropertyDetailScreen() {
   const colors = useColors();
@@ -28,6 +47,13 @@ export default function PropertyDetailScreen() {
   );
 
   const [activeImage, setActiveImage] = useState(0);
+  const [amenitiesOpen, setAmenitiesOpen] = useState(false);
+  const { data: catalog } = useGetAmenityCatalog();
+  const selectedAmenities = property?.amenities;
+  const amenityGroups = useMemo(
+    () => groupSelectedAmenities(catalog?.categories ?? [], selectedAmenities ?? []),
+    [catalog, selectedAmenities],
+  );
 
   if (isLoading || !property) {
     return (
@@ -40,12 +66,34 @@ export default function PropertyDetailScreen() {
   }
 
   const handleShare = async () => {
+    const url = `https://www.staybestt.com/property/${property.id}`;
+    const message = `Check out ${property.name} on StayBest!`;
     try {
+      if (Platform.OS === 'web') {
+        if (navigator.share) {
+          try {
+            await navigator.share({ title: property.name, text: message, url });
+            return;
+          } catch (error) {
+            if (error instanceof Error && error.name === 'AbortError') return;
+          }
+        }
+        try {
+          await navigator.clipboard.writeText(url);
+          Alert.alert('Link copied', 'The property link is ready to share.');
+        } catch {
+          window.prompt('Copy this property link to share:', url);
+        }
+        return;
+      }
       await Share.share({
-        message: `Check out ${property.name} on StayBest!`,
-        url: `https://staybest.com/property/${property.id}`, // Mock URL
+        title: property.name,
+        message: Platform.OS === 'ios' ? message : `${message}\n${url}`,
+        ...(Platform.OS === 'ios' ? { url } : {}),
       });
-    } catch (error) {}
+    } catch {
+      Alert.alert('Could not share', 'Please try sharing this property again.');
+    }
   };
 
   const images = property.images?.length > 0 ? property.images : [property.imageUrl];
@@ -88,6 +136,9 @@ export default function PropertyDetailScreen() {
               <Pressable 
                 style={[styles.circleBtn, { backgroundColor: colors.background }]}
                 onPress={handleShare}
+                accessibilityRole="button"
+                accessibilityLabel={`Share ${property.name}`}
+                testID="button-share-property"
               >
                 <Feather name="share" size={20} color={colors.foreground} />
               </Pressable>
@@ -147,16 +198,29 @@ export default function PropertyDetailScreen() {
 
           <View style={styles.section}>
             <ThemedText type="subtitle" weight="bold" style={styles.sectionTitle}>Amenities</ThemedText>
-            <View style={styles.amenitiesGrid}>
-              {property.amenities?.map((amenity, i) => (
-                <View key={i} style={styles.amenityItem}>
-                  <Feather name="check" size={18} color={colors.primary} />
-                  <ThemedText color={colors.foreground}>{amenity}</ThemedText>
+            {amenityGroups.length === 0 ? (
+              <ThemedText color={colors.mutedForeground}>No amenities have been listed for this property.</ThemedText>
+            ) : (
+              <>
+                <View style={styles.amenitiesGrid}>
+                  {amenityGroups.flatMap(g => g.amenities).slice(0, 6).map(a => (
+                    <View key={`${a.id}-${a.name}`} style={styles.amenityItem}>
+                      <AmenityGlyph icon={a.icon} color={colors.foreground} />
+                      <ThemedText color={colors.foreground} style={{ flex: 1 }} numberOfLines={2}>{a.name}</ThemedText>
+                    </View>
+                  ))}
                 </View>
-              ))}
-            </View>
+                <Pressable
+                  style={[styles.viewAllBtn, { borderColor: colors.border }]}
+                  onPress={() => setAmenitiesOpen(true)}
+                  accessibilityRole="button"
+                >
+                  <ThemedText weight="semibold">View all amenities</ThemedText>
+                </Pressable>
+              </>
+            )}
           </View>
-          
+
           <View style={styles.divider} />
 
           <View style={styles.section}>
@@ -195,6 +259,35 @@ export default function PropertyDetailScreen() {
 
         </Animated.View>
       </ScrollView>
+
+      <Modal visible={amenitiesOpen} animationType="slide" transparent onRequestClose={() => setAmenitiesOpen(false)}>
+        <View style={styles.modalBackdrop}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setAmenitiesOpen(false)} accessibilityLabel="Close amenities" />
+          <View style={[styles.modalSheet, { backgroundColor: colors.background, paddingBottom: insets.bottom + 16 }]}>
+            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+              <ThemedText type="subtitle" weight="bold">USP & Amenities</ThemedText>
+              <Pressable onPress={() => setAmenitiesOpen(false)} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close">
+                <Feather name="x" size={22} color={colors.foreground} />
+              </Pressable>
+            </View>
+            <ScrollView contentContainerStyle={{ padding: 20 }}>
+              {amenityGroups.map((g, gi) => (
+                <View key={g.id} style={[styles.modalGroup, gi > 0 && { borderTopWidth: 1, borderTopColor: colors.border }]}>
+                  <ThemedText weight="semibold" style={{ marginBottom: 12 }}>{g.name}</ThemedText>
+                  <View style={styles.amenitiesGrid}>
+                    {g.amenities.map(a => (
+                      <View key={`${a.id}-${a.name}`} style={styles.amenityItem}>
+                        <AmenityGlyph icon={a.icon} color={colors.foreground} />
+                        <ThemedText color={colors.foreground} style={{ flex: 1 }}>{a.name}</ThemedText>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
 
       {/* Bottom Booking Bar */}
       <Animated.View style={[styles.bottomBar, { backgroundColor: colors.background, borderTopColor: colors.border, paddingBottom: insets.bottom || 24 }]}>
@@ -301,6 +394,42 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     width: '48%',
+  },
+  iconCircle: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  viewAllBtn: {
+    marginTop: 16,
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  modalBackdrop: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(11,26,48,0.45)',
+  },
+  modalSheet: {
+    maxHeight: '85%',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+  },
+  modalGroup: {
+    paddingVertical: 16,
   },
   roomCard: {
     flexDirection: 'row',

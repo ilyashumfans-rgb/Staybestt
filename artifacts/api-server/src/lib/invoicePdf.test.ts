@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import fontkit from "@pdf-lib/fontkit";
 import { PDFDocument } from "pdf-lib";
 import { describe, expect, it } from "vitest";
@@ -22,6 +22,8 @@ describe("invoice PDF rendering", () => {
         businessName: "StayBest Résorts",
         address: "1 Main Street, नई दिल्ली, India\nAccounts department",
         taxRegistration: "GST-₹-123",
+        email: "billing@example.com",
+        phone: "+91 9000000000",
       },
       invoice: {
         invoiceNumber: "SB-INV-UNICODE",
@@ -64,6 +66,7 @@ describe("invoice PDF rendering", () => {
 
     expect(pdf.subarray(0, 5).toString("ascii")).toBe("%PDF-");
     const document = await PDFDocument.load(pdf);
+    if (process.env.WRITE_PROFILE_PDF === "1") await writeFile("/tmp/billing-profile.pdf", pdf);
     expect(document.getPageCount()).toBeGreaterThan(1);
   });
 });

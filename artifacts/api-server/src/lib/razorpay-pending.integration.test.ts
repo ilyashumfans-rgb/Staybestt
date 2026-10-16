@@ -1,5 +1,7 @@
 import { randomUUID } from "node:crypto";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+// Never dispatch unrelated live notifications while testing payment fixtures.
+vi.mock("./partnerPush", () => ({ dispatchPartnerPush: vi.fn().mockResolvedValue(undefined) }));
 import { eq, inArray } from "drizzle-orm";
 import {
   bookingsTable,
@@ -11,6 +13,7 @@ import {
   invoicePaymentsTable,
   invoicesTable,
   notificationsTable,
+  partnerBookingAlertsTable,
   propertiesTable,
   razorpayOrdersTable,
   razorpayPaymentsTable,
@@ -246,6 +249,10 @@ run("pending Razorpay ledger integration", () => {
       .from(bookingsTable)
       .where(eq(bookingsTable.id, fixture.booking.id));
     expect(booking).toMatchObject({ status: "confirmed" });
+    const alerts = await db.select().from(partnerBookingAlertsTable)
+      .where(eq(partnerBookingAlertsTable.bookingId, fixture.booking.id));
+    expect(alerts).toHaveLength(1);
+    expect(alerts[0].userId).toBe(partnerId);
     expect(booking?.bookingRef).toMatch(/^SB-[A-Z2-9]{6}$/);
 
     const invoices = await db
@@ -420,6 +427,8 @@ run("pending Razorpay ledger integration", () => {
     expect(booking).toMatchObject({ status: "expired", bookingRef: null });
     expect(invoices).toHaveLength(1);
     expect(payments).toMatchObject([{ status: "captured", refundRequired: true }]);
+    expect(await db.select().from(partnerBookingAlertsTable)
+      .where(eq(partnerBookingAlertsTable.bookingId, fixture.booking.id))).toHaveLength(0);
     expect(ledgers).toHaveLength(0);
     expect((await loadPaymentSummary(fixture.booking.id))?.status).toBe("refund_required");
   });

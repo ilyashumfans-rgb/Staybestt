@@ -76,8 +76,9 @@ export default function PartnerLanding() {
         return;
       }
       setLocation("/partner");
-    } catch {
-      toast.error("Wrong username or password");
+    } catch (err: any) {
+      const msg = err?.data?.message;
+      toast.error(err?.status === 403 && msg ? msg : msg || "Wrong username or password");
     } finally {
       setLoggingIn(false);
     }
@@ -191,6 +192,9 @@ export default function PartnerLanding() {
               <p className="text-xs text-muted-foreground text-center mt-3">
                 Use the login given to you by the StayBest team.
               </p>
+              <p className="text-sm text-center mt-4">
+                New partner? <Link href="/partners/register" className="text-primary font-semibold" data-testid="link-partner-register">Register your hotel</Link>
+              </p>
             </div>
           )}
         </div>
@@ -212,8 +216,8 @@ export default function PartnerLanding() {
           ))}
         </div>
         <div className="text-center mt-12 text-sm text-muted-foreground">
-          New to StayBest? Ask the StayBest team to register your email as a partner — then sign in
-          here and register your first property.
+          New to StayBest? <Link href="/partners/register" className="text-primary font-semibold">Register as a partner</Link> — no email
+          needed. Once the StayBest team approves your account, sign in here and add your first property.
         </div>
       </section>
     </div>

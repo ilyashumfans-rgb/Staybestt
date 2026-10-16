@@ -12,11 +12,11 @@ import {
   getGetPropertyReviewsQueryKey,
   getGetWishlistQueryKey
 } from "@workspace/api-client-react";
-import { useState } from "react";
+import { useLayoutEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { 
   MapPin, Star, Heart, Check, Clock, Info, 
-  ChevronRight, Calendar, Users, Loader2, ChevronLeft
+  ChevronRight, Calendar, Users, Loader2, ChevronLeft, Share2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +26,8 @@ import { useGuestIdentity } from "@/hooks/use-auth";
 import { toast } from "sonner";
 import { format, addDays } from "date-fns";
 import { PropertyMap } from "@/components/PropertyMap";
+import { AmenitiesShowcase, ExperiencesList } from "@/components/amenities/AmenitiesShowcase";
+import { PropertySectionNav } from "@/components/property/PropertySectionNav";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
 type PhotoGallery = {
@@ -73,6 +75,13 @@ export default function PropertyDetail() {
   const { data: property, isLoading } = useGetProperty(propertyId, {
     query: { enabled: !!propertyId, queryKey: getGetPropertyQueryKey(propertyId) }
   });
+
+  // Client-side navigation retains the previous page's scroll position.
+  // Reset again when this property's content arrives, but not on background
+  // refetches or when the visitor uses the section navigation.
+  useLayoutEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  }, [propertyId, property?.id]);
 
   const { data: reviews } = useGetPropertyReviews(propertyId, {
     query: { enabled: !!propertyId, queryKey: getGetPropertyReviewsQueryKey(propertyId) }
@@ -169,6 +178,25 @@ export default function PropertyDetail() {
     );
   }
 
+  const highlights = [
+    property.featured && "Featured StayBest property",
+    property.rating > 0 && `Rated ${property.rating.toFixed(1)} by ${property.reviewCount} guests`,
+    property.freeCancellation && "Free cancellation available",
+    property.breakfastIncluded && "Breakfast included",
+    ...property.amenities.slice(0, 4),
+  ].filter((h): h is string => Boolean(h));
+  const mealAmenities = property.amenities.filter(a => /breakfast|meal|restaurant|dining|kitchen|food|cafe|bar/i.test(a));
+  const petPolicies = property.policies.filter(p => /pet/i.test(p));
+  const faqs: { q: string; a: string }[] = [
+    { q: "What are the check-in and check-out times?", a: `Check-in is ${property.checkInTime} and check-out is ${property.checkOutTime}.` },
+    { q: "Is breakfast included?", a: property.breakfastIncluded ? "Yes, breakfast is listed as included." : "Breakfast is not listed as included." },
+    { q: "Is free cancellation available?", a: property.freeCancellation ? "Yes, this property offers free cancellation. Confirm the exact terms when booking." : "Free cancellation is not listed for this property." },
+    ...(petPolicies.length > 0 ? [{ q: "Are pets allowed?", a: petPolicies.join(" ") }] : []),
+    { q: "How many guests can stay?", a: property.rooms.length > 0 ? `Room capacity ranges up to ${Math.max(...property.rooms.map(r => r.maxGuests))} guests per room.` : "Room details have not been supplied." },
+    { q: "Where is the property located?", a: property.address },
+    ...(property.contactPhone || property.contactEmail ? [{ q: "How can I contact the property?", a: [property.contactPhone, property.contactEmail].filter(Boolean).join(" / ") }] : []),
+  ];
+
   return (
     <Layout>
       {/* Gallery Header */}
@@ -191,6 +219,31 @@ export default function PropertyDetail() {
               </p>
             </div>
             <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                className="gap-2 border-white/20 bg-white/10 hover:bg-white/20 text-white"
+                aria-label={`Share ${property.name}`}
+                data-testid="button-share-property"
+                onClick={async () => {
+                  const url = `https://www.staybestt.com/property/${property.id}`;
+                  if (navigator.share) {
+                    try {
+                      await navigator.share({ title: property.name, text: `Check out ${property.name} on StayBest!`, url });
+                      return;
+                    } catch (error) {
+                      if (error instanceof Error && error.name === "AbortError") return;
+                    }
+                  }
+                  try {
+                    await navigator.clipboard.writeText(url);
+                    toast.success("Property link copied");
+                  } catch {
+                    window.prompt("Copy this property link to share:", url);
+                  }
+                }}
+              >
+                <Share2 className="w-4 h-4" /> Share
+              </Button>
               <Button 
                 variant="outline" 
                 className={`gap-2 border-white/20 bg-white/10 hover:bg-white/20 text-white ${isWishlisted ? 'text-primary border-primary/50' : ''}`}
@@ -234,6 +287,8 @@ export default function PropertyDetail() {
         </div>
       </div>
 
+      <PropertySectionNav />
+
       <Dialog open={gallery !== null} onOpenChange={open => { if (!open) setGallery(null); }}>
         <DialogContent
           aria-describedby={undefined}
@@ -276,35 +331,39 @@ export default function PropertyDetail() {
         </DialogContent>
       </Dialog>
 
-      <div className="container mx-auto px-4 pb-20">
+      <div className="container mx-auto px-4 pt-10 pb-20">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-12">
             
-            {/* Description */}
-            <section>
-              <h2 className="text-2xl font-serif font-bold text-secondary mb-4">About this property</h2>
+            <section id="overview" className="scroll-mt-36">
+              <h2 className="text-2xl font-serif font-bold text-secondary mb-4">Overview</h2>
               <p className="text-muted-foreground leading-relaxed whitespace-pre-line">
                 {property.description}
               </p>
+              <dl className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                <div><dt className="text-muted-foreground">Category</dt><dd className="font-semibold text-secondary capitalize">{property.category}</dd></div>
+                <div><dt className="text-muted-foreground">Rating</dt><dd className="font-semibold text-secondary">{property.rating.toFixed(1)} ({property.reviewCount})</dd></div>
+                <div><dt className="text-muted-foreground">Room types</dt><dd className="font-semibold text-secondary">{property.rooms.length}</dd></div>
+                <div><dt className="text-muted-foreground">From</dt><dd className="font-semibold text-secondary">{formatPrice(property.startingPrice)} / night</dd></div>
+              </dl>
             </section>
 
-            {/* Amenities */}
-            <section>
-              <h2 className="text-2xl font-serif font-bold text-secondary mb-4">Amenities</h2>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                {property.amenities.map(amenity => (
-                  <div key={amenity} className="flex items-center gap-2 text-secondary">
-                    <Check className="w-5 h-5 text-primary" />
-                    <span>{amenity}</span>
-                  </div>
-                ))}
-              </div>
+            <section id="highlights" className="scroll-mt-36">
+              <h2 className="text-2xl font-serif font-bold text-secondary mb-4">Highlights</h2>
+              {highlights.length > 0 ? (
+                <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {highlights.map(h => (
+                    <li key={h} className="flex items-start gap-2 text-secondary"><Check className="w-5 h-5 text-primary shrink-0" /><span>{h}</span></li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-muted-foreground text-sm">No highlights have been supplied for this property.</p>
+              )}
             </section>
 
-            {/* Policies */}
-            <section>
-              <h2 className="text-2xl font-serif font-bold text-secondary mb-4">Policies</h2>
+            <section id="refund-policy" className="scroll-mt-36">
+              <h2 className="text-2xl font-serif font-bold text-secondary mb-4">Refund Policy</h2>
               <div className="bg-muted/50 rounded-2xl p-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                   <div className="flex gap-3">
@@ -322,36 +381,31 @@ export default function PropertyDetail() {
                     </div>
                   </div>
                 </div>
-                
                 <div className="space-y-3">
+                  {property.freeCancellation ? (
+                    <div className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-green-600 shrink-0 mt-0.5" />
+                      <p className="text-sm text-secondary font-medium">Free cancellation is offered for this property. Confirm the exact terms when booking.</p>
+                    </div>
+                  ) : (
+                    <div className="flex items-start gap-2">
+                      <Info className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                      <p className="text-sm text-secondary">Free cancellation is not listed for this property.</p>
+                    </div>
+                  )}
                   {property.policies.map((policy, i) => (
                     <div key={i} className="flex items-start gap-2">
                       <Info className="w-4 h-4 text-primary shrink-0 mt-0.5" />
                       <p className="text-sm text-secondary">{policy}</p>
                     </div>
                   ))}
-                  {property.freeCancellation && (
-                    <div className="flex items-start gap-2">
-                      <Check className="w-4 h-4 text-green-600 shrink-0 mt-0.5" />
-                      <p className="text-sm text-secondary font-medium">Free cancellation up to 48 hours before check-in.</p>
-                    </div>
-                  )}
                 </div>
               </div>
             </section>
 
-            {/* Location Map */}
-            {property.latitude != null && property.longitude != null && (
-              <PropertyMap
-                latitude={property.latitude}
-                longitude={property.longitude}
-                name={property.name}
-              />
-            )}
-
             {/* Rooms List */}
-            <section id="rooms" className="scroll-mt-24">
-              <h2 className="text-2xl font-serif font-bold text-secondary mb-6">Available Rooms</h2>
+            <section id="rooms" className="scroll-mt-36">
+              <h2 className="text-2xl font-serif font-bold text-secondary mb-6">Spaces</h2>
               
               {!isCheckingAvailability ? (
                 <div className="space-y-6">
@@ -440,13 +494,16 @@ export default function PropertyDetail() {
             </section>
 
             {/* Reviews */}
-            <section className="pt-10 border-t">
+            <section id="reviews" className="pt-10 border-t scroll-mt-36">
               <h2 className="text-2xl font-serif font-bold text-secondary mb-6 flex items-center gap-2">
                 <Star className="w-6 h-6 text-primary fill-current" />
                 {property.rating.toFixed(1)} · {property.reviewCount} Reviews
               </h2>
               
               <div className="space-y-6 mb-10">
+                {reviews && reviews.length === 0 && (
+                  <p className="text-muted-foreground text-sm">No reviews yet. Be the first to share your stay.</p>
+                )}
                 {reviews?.slice(0, 5).map(review => (
                   <div key={review.id} className="border-b pb-6">
                     <div className="flex items-center gap-4 mb-3">
@@ -505,6 +562,67 @@ export default function PropertyDetail() {
                     {createReview.isPending ? "Submitting..." : "Submit Review"}
                   </Button>
                 </form>
+              </div>
+            </section>
+
+            <section id="amenities" className="scroll-mt-36">
+              <h2 className="text-2xl font-serif font-bold text-secondary mb-4">Amenities</h2>
+              <AmenitiesShowcase selected={property.amenities} />
+            </section>
+
+            <section id="meals" className="scroll-mt-36">
+              <h2 className="text-2xl font-serif font-bold text-secondary mb-4">Meals</h2>
+              <div className="flex items-start gap-3 bg-muted/50 rounded-2xl p-6">
+                {property.breakfastIncluded ? <Check className="w-5 h-5 text-primary shrink-0" /> : <Info className="w-5 h-5 text-primary shrink-0" />}
+                <div>
+                  <p className="font-semibold text-secondary">{property.breakfastIncluded ? "Breakfast included" : "Breakfast not included"}</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {property.breakfastIncluded
+                      ? "This property lists breakfast as included with the stay."
+                      : "This property does not list breakfast as included."}
+                    {mealAmenities.length > 0 && ` Related amenities: ${mealAmenities.join(", ")}.`}
+                  </p>
+                </div>
+              </div>
+            </section>
+
+            <section id="location" className="scroll-mt-36">
+              <h2 className="text-2xl font-serif font-bold text-secondary mb-4">Location</h2>
+              <p className="text-secondary flex items-start gap-2 mb-2">
+                <MapPin className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                <span>{property.address}</span>
+              </p>
+              <p className="text-sm text-muted-foreground mb-4">
+                {[property.landmark && `Near ${property.landmark}`, property.area, property.city, property.state, property.country, property.pincode].filter(Boolean).join(", ")}
+              </p>
+              {property.latitude != null && property.longitude != null ? (
+                <PropertyMap
+                  latitude={property.latitude}
+                  longitude={property.longitude}
+                  name={property.name}
+                />
+              ) : (
+                <p className="text-sm text-muted-foreground">Map coordinates have not been supplied for this property.</p>
+              )}
+            </section>
+
+            <section id="experiences" className="scroll-mt-36">
+              <h2 className="text-2xl font-serif font-bold text-secondary mb-4">Experiences</h2>
+              <ExperiencesList selected={property.amenities} />
+            </section>
+
+            <section id="faqs" className="scroll-mt-36">
+              <h2 className="text-2xl font-serif font-bold text-secondary mb-4">FAQ's</h2>
+              <div className="divide-y border-y">
+                {faqs.map(f => (
+                  <details key={f.q} className="group py-4">
+                    <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold text-secondary">
+                      {f.q}
+                      <ChevronRight className="w-4 h-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-90" />
+                    </summary>
+                    <p className="mt-2 text-sm text-muted-foreground">{f.a}</p>
+                  </details>
+                ))}
               </div>
             </section>
           </div>

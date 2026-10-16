@@ -22,6 +22,7 @@ import { Link } from "wouter";
 import { getProperty } from "@workspace/api-client-react";
 import { LocationFields } from "@/components/LocationFields";
 import { PropertyImageUploader } from "@/components/PropertyImageUploader";
+import { AmenityPicker } from "@/components/amenities/AmenityPicker";
 import {
   Dialog,
   DialogContent,
@@ -126,7 +127,7 @@ export default function AdminProperties() {
   // Form State
   const [formData, setFormData] = useState({
     name: "", category: "stay", country: "", state: "", city: "", area: "", pincode: "", latitude: "", longitude: "", address: "", description: "",
-    imageUrl: "", images: "", amenities: "", policies: "", 
+    imageUrl: "", images: "", amenities: [] as string[], policies: "",
     checkInTime: "14:00", checkOutTime: "11:00", startingPrice: "", 
     freeCancellation: false, breakfastIncluded: false, featured: false, ownerId: ""
   });
@@ -144,7 +145,7 @@ export default function AdminProperties() {
   const resetForm = () => {
     setFormData({
       name: "", category: "stay", country: "", state: "", city: "", area: "", pincode: "", latitude: "", longitude: "", address: "", description: "",
-      imageUrl: "", images: "", amenities: "", policies: "", 
+      imageUrl: "", images: "", amenities: [] as string[], policies: "",
       checkInTime: "14:00", checkOutTime: "11:00", startingPrice: "", 
       freeCancellation: false, breakfastIncluded: false, featured: false, ownerId: ""
     });
@@ -170,7 +171,7 @@ export default function AdminProperties() {
         description: detail.description,
         imageUrl: detail.imageUrl,
         images: detail.images.join(", "),
-        amenities: detail.amenities.join(", "),
+        amenities: [...detail.amenities],
         policies: detail.policies.join(", "),
         checkInTime: detail.checkInTime,
         checkOutTime: detail.checkOutTime,
@@ -217,7 +218,7 @@ export default function AdminProperties() {
       description: formData.description,
       imageUrl: formData.imageUrl,
       images: formData.images.split(",").map(s => s.trim()).filter(Boolean),
-      amenities: formData.amenities.split(",").map(s => s.trim()).filter(Boolean),
+      amenities: formData.amenities,
       policies: formData.policies.split(",").map(s => s.trim()).filter(Boolean),
       checkInTime: formData.checkInTime,
       checkOutTime: formData.checkOutTime,
@@ -310,10 +311,7 @@ export default function AdminProperties() {
                   onMainChange={(imageUrl) => setFormData({ ...formData, imageUrl })}
                   onGalleryChange={(images) => setFormData({ ...formData, images })}
                 />
-                <div>
-                  <label className="text-xs font-bold text-secondary mb-1 block">Amenities (comma separated)</label>
-                  <Input required value={formData.amenities} onChange={e => setFormData({...formData, amenities: e.target.value})} />
-                </div>
+                <AmenityPicker allowCatalogAdd value={formData.amenities} onChange={(amenities) => setFormData((current) => ({ ...current, amenities }))} />
                 <div>
                   <label className="text-xs font-bold text-secondary mb-1 block">Policies (comma separated)</label>
                   <Input required value={formData.policies} onChange={e => setFormData({...formData, policies: e.target.value})} />

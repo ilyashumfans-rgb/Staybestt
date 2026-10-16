@@ -16,7 +16,11 @@ import {
   razorpayPaymentsTable,
   roomsTable,
   usersTable,
+  partnerBookingAlertsTable,
+  partnerPushSubscriptionsTable,
+  partnerPushDeliveriesTable,
 } from "@workspace/db";
+import { dispatchPartnerPush } from "./partnerPush";
 import { currentBusinessDate } from "./billing";
 import { bookedRoomsCount } from "./availability";
 import { lockCoupon, lockRoomAndBooking } from "./advisoryLocks";
@@ -246,6 +250,18 @@ async function finalizeCapturedPendingBooking(tx: Tx, booking: any): Promise<any
           reason: "allocation_created_after_capture",
         })),
       );
+    }
+  }
+  if (property?.ownerId) {
+    const [alert] = await tx.insert(partnerBookingAlertsTable).values({
+      bookingId: confirmed.id, userId: property.ownerId,
+    }).onConflictDoNothing().returning();
+    if (alert) {
+      const devices = await tx.select({ id: partnerPushSubscriptionsTable.id }).from(partnerPushSubscriptionsTable)
+        .where(eq(partnerPushSubscriptionsTable.userId, property.ownerId));
+      if (devices.length) await tx.insert(partnerPushDeliveriesTable).values(devices.map((device: { id: number }) => ({
+        alertId: alert.id, subscriptionId: device.id,
+      }))).onConflictDoNothing();
     }
   }
   return confirmed;
@@ -732,6 +748,7 @@ export async function recordRazorpayPayment(input: {
   });
 
   const summary = await loadPaymentSummary(input.bookingId);
+  void dispatchPartnerPush();
   if (!summary) throw new RazorpayLedgerError("missing_booking", "Booking not found");
   return summary;
 }

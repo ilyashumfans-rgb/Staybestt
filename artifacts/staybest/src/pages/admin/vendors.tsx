@@ -9,6 +9,7 @@ import {
   getListVendorCredentialsQueryKey,
   useListAdminPropertyDocuments,
 } from "@workspace/api-client-react";
+import { PartnerApplications } from "@/components/admin/PartnerApplications";
 import { AdminAgreementDownloads } from "@/components/property-documents/AdminAgreementDownloads";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
@@ -51,7 +52,9 @@ export default function AdminVendors() {
       { id: userId, data: { password: pwd || null } },
       {
         onSuccess: (res) => {
-          toast.success(`Password updated for ${res.email}`);
+          toast.success(`Password updated for ${res.username || res.email}`);
+          setCredentials(res);
+          setCreateOpen(true);
           queryClient.invalidateQueries({ queryKey: getListVendorCredentialsQueryKey() });
         },
         onError: (err: any) => {
@@ -135,10 +138,12 @@ export default function AdminVendors() {
         </Button>
       </div>
 
+      <PartnerApplications />
+
       <Dialog open={createOpen} onOpenChange={(o) => { setCreateOpen(o); if (!o) setCredentials(null); }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{credentials ? "Vendor login created" : "Create vendor login"}</DialogTitle>
+            <DialogTitle>{credentials ? "Vendor login credentials" : "Create vendor login"}</DialogTitle>
           </DialogHeader>
           {credentials ? (
             <div className="space-y-4">
@@ -207,7 +212,7 @@ export default function AdminVendors() {
                     {c.password ? (
                       <span className="bg-muted/60 rounded px-2 py-1">{c.password}</span>
                     ) : (
-                      <span className="text-muted-foreground text-xs">Own sign-in (Google/email) — use Change Password to set one</span>
+                      <span className="text-muted-foreground text-xs">Password not stored or shown. If lost, use Change Password to issue a new one.</span>
                     )}
                   </td>
                   <td className="p-4 text-right">

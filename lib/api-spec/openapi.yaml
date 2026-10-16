@@ -21,6 +21,183 @@ tags:
   - name: agent
   - name: employee
 paths:
+  /partner/alerts/config:
+    get:
+      operationId: getPartnerAlertsConfig
+      tags: [partner]
+      responses:
+        "200":
+          description: Public browser push configuration
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [publicKey]
+                properties:
+                  publicKey: { type: string }
+  /partner/alerts/subscriptions:
+    post:
+      operationId: subscribePartnerAlerts
+      tags: [partner]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PartnerPushSubscriptionInput" }
+      responses:
+        "200": { description: Device subscribed }
+    delete:
+      operationId: unsubscribePartnerAlerts
+      tags: [partner]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PartnerPushUnsubscribeInput" }
+      responses:
+        "200": { description: Device unsubscribed }
+  /partner/alerts:
+    get:
+      operationId: listPartnerBookingAlerts
+      tags: [partner]
+      responses:
+        "200":
+          description: Unread confirmed bookings belonging to this partner
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/PartnerBookingAlert" }
+  /partner/alerts/{id}/read:
+    post:
+      operationId: readPartnerBookingAlert
+      tags: [partner]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: integer, minimum: 1 } }
+      responses:
+        "200": { description: Alert acknowledged }
+  /admin/amenities/{id}:
+    delete:
+      operationId: deleteAmenity
+      tags: [admin]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer, minimum: 1 }
+      responses:
+        "200":
+          description: Amenity removed from catalog; existing property selections preserved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AmenityCatalog"
+        "404":
+          description: Amenity not found
+  /amenity-catalog:
+    get:
+      operationId: getAmenityCatalog
+      tags: [properties]
+      responses:
+        "200":
+          description: Available amenity categories and options
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AmenityCatalog"
+  /admin/amenity-categories:
+    post:
+      operationId: createAmenityCategory
+      tags: [admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AmenityCategoryInput"
+      responses:
+        "201":
+          description: Updated catalog
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AmenityCatalog"
+  /admin/amenities:
+    post:
+      operationId: createAmenity
+      tags: [admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AmenityInput"
+      responses:
+        "201":
+          description: Updated catalog
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AmenityCatalog"
+  /partner/register:
+    post:
+      tags: [partner]
+      operationId: registerPartnerAccount
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PartnerRegistrationInput'
+      responses:
+        '201':
+          description: Credentials shown once; approval required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerRegistrationResult'
+        '400':
+          description: Invalid registration
+        '429':
+          description: Too many registrations
+  /admin/partner-applications:
+    get:
+      tags: [admin]
+      operationId: listPartnerApplications
+      responses:
+        '200':
+          description: Partner registrations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PartnerApplication'
+  /admin/partner-applications/{id}/approval:
+    post:
+      tags: [admin]
+      operationId: decidePartnerApplication
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PartnerApprovalInput'
+      responses:
+        '200':
+          description: Application updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerApplication'
+        '409':
+          description: Application already reviewed
   /storage/uploads/request-url:
     post:
       tags: [Storage]
@@ -3362,12 +3539,79 @@ components:
         rejected.
       schema: { type: string, minLength: 1, maxLength: 512 }
   schemas:
+    PartnerPushSubscriptionInput:
+      type: object
+      required: [endpoint, keys]
+      properties:
+        endpoint: { type: string, maxLength: 2048 }
+        keys:
+          type: object
+          required: [p256dh, auth]
+          properties:
+            p256dh: { type: string, pattern: '^[A-Za-z0-9_-]{87}=?$' }
+            auth: { type: string, pattern: '^[A-Za-z0-9_-]{22}(==)?$' }
+    PartnerPushUnsubscribeInput:
+      type: object
+      required: [endpoint]
+      properties:
+        endpoint: { type: string, maxLength: 2048 }
+    PartnerBookingAlert:
+      type: object
+      required: [id, bookingId, propertyName, bookingRef, checkIn]
+      properties:
+        id: { type: integer }
+        bookingId: { type: integer }
+        propertyName: { type: string }
+        bookingRef: { type: ["string", "null"] }
+        checkIn: { type: string }
+    AmenityCategoryInput:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 80 }
+    AmenityInput:
+      type: object
+      required: [categoryId, name, icon]
+      properties:
+        categoryId: { type: integer, minimum: 1 }
+        name: { type: string, minLength: 1, maxLength: 80 }
+        icon:
+          type: string
+          enum: [pool, lawn, breakfast, wifi, theatre, bbq, bonfire, gazebo, games, bar, tv, music, balcony, ac, refrigerator, water, check]
+    AmenityOption:
+      type: object
+      required: [id, name, icon]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        icon: { type: string }
+    AmenityGroup:
+      type: object
+      required: [id, name, amenities]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        amenities:
+          type: array
+          items:
+            $ref: "#/components/schemas/AmenityOption"
+    AmenityCatalog:
+      type: object
+      required: [categories]
+      properties:
+        categories:
+          type: array
+          items:
+            $ref: "#/components/schemas/AmenityGroup"
     BillingSettingsInput:
       type: object
       properties:
         businessName: { type: string, minLength: 1, maxLength: 200 }
         address: { type: string, minLength: 1, maxLength: 1000 }
         taxRegistration: { type: ["string", "null"], maxLength: 100 }
+        email: { type: ["string", "null"], format: email, maxLength: 254 }
+        phone: { type: ["string", "null"], maxLength: 30 }
+        logoUrl: { type: ["string", "null"], maxLength: 500, pattern: '^/api/storage/objects/uploads/[a-zA-Z0-9-]+$' }
       required: [businessName, address]
     BillingSettings:
       allOf:
@@ -3604,6 +3848,63 @@ components:
       properties:
         status: { type: string, enum: [pending, approved, active, suspended, rejected] }
       required: [status]
+    PartnerRegistrationInput:
+      type: object
+      required: [name, phone, businessName, city]
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 100
+        phone:
+          type: string
+          minLength: 7
+          maxLength: 20
+        businessName:
+          type: string
+          minLength: 2
+          maxLength: 150
+        city:
+          type: string
+          minLength: 2
+          maxLength: 100
+    PartnerRegistrationResult:
+      type: object
+      required: [username, password, message]
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+        message:
+          type: string
+    PartnerApprovalInput:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [approved, rejected]
+    PartnerApplication:
+      type: object
+      required: [id, username, name, phone, businessName, city, status, createdAt]
+      properties:
+        id:
+          type: string
+        username:
+          type: string
+        name:
+          type: string
+        phone:
+          type: string
+        businessName:
+          type: string
+        city:
+          type: string
+        status:
+          type: string
+        createdAt:
+          type: string
     CreateVendorInput:
       type: object
       properties:

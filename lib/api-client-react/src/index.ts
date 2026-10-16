@@ -1,5 +1,6 @@
 export * from "./generated/api";
 export * from "./generated/api.schemas";
+export * from "./amenities";
 export {
   customFetch,
   setBaseUrl,

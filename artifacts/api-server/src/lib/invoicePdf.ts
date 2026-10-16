@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import fontkit from "@pdf-lib/fontkit";
+import { ObjectStorageService } from "./objectStorage";
 import {
   PDFDocument,
   rgb,
@@ -13,6 +14,9 @@ type PdfSettings = {
   businessName: string;
   address: string;
   taxRegistration: string | null;
+  email?: string | null;
+  phone?: string | null;
+  logoUrl?: string | null;
 };
 
 type PdfLine = {
@@ -165,7 +169,26 @@ async function embedFonts(document: PDFDocument): Promise<PdfFonts> {
   };
 }
 
-async function embedLogo(document: PDFDocument) {
+export async function readCompanyLogo(logoUrl: string): Promise<Buffer> {
+  if (!/^\/api\/storage\/objects\/uploads\/[a-zA-Z0-9-]+$/.test(logoUrl)) throw new Error("Invalid company logo path");
+  const file = await new ObjectStorageService().getObjectEntityFile(logoUrl.slice("/api/storage".length));
+  const [metadata] = await file.getMetadata();
+  if (Number(metadata.size) > 1024 * 1024) throw new Error("Company logo must be under 1 MB");
+  const [bytes] = await file.download({ start: 0, end: 1024 * 1024 });
+  if (bytes.length > 1024 * 1024) throw new Error("Company logo must be under 1 MB");
+  if (bytes.length < 24 || bytes.subarray(0, 8).toString("hex") !== "89504e470d0a1a0a" ||
+      bytes.readUInt32BE(16) > 1024 || bytes.readUInt32BE(20) > 1024) {
+    throw new Error("Company logo must be a PNG no larger than 1024 pixels");
+  }
+  // Validate the PNG instead of trusting its uploaded content type.
+  const validation = await PDFDocument.create();
+  const image = await validation.embedPng(bytes);
+  if (image.width > 1024 || image.height > 1024) throw new Error("Company logo dimensions are too large");
+  return bytes;
+}
+
+async function embedLogo(document: PDFDocument, logoUrl?: string | null) {
+  if (logoUrl) return document.embedPng(await readCompanyLogo(logoUrl));
   const candidates = [
     path.resolve(
       path.dirname(fileURLToPath(import.meta.url)),
@@ -314,8 +337,9 @@ function drawHeader(
 ): number {
   const top = layout.pageHeight - 42;
   if (logo) {
-    const logoHeight = 54;
-    const logoWidth = (logo.width / logo.height) * logoHeight;
+    const scale = Math.min(180 / logo.width, 54 / logo.height);
+    const logoHeight = logo.height * scale;
+    const logoWidth = logo.width * scale;
     page.drawImage(logo, {
       x: layout.left,
       y: top - logoHeight,
@@ -349,7 +373,7 @@ function drawHeader(
     fonts.bold,
     10.5,
   );
-  const addressHeight = drawWrapped(
+  let addressHeight = drawWrapped(
     page,
     normalize(settings.address),
     layout.left,
@@ -360,11 +384,21 @@ function drawHeader(
     11,
     COLORS.muted,
   );
+  for (const contact of [
+    settings.email ? `Email: ${settings.email}` : "",
+    settings.phone ? `Phone: ${settings.phone}` : "",
+  ].filter(Boolean)) {
+    addressHeight += 4 + drawWrapped(
+      page, normalize(contact), layout.left,
+      detailsY - businessHeight - addressHeight - 8,
+      240, fonts.regular, 8, 11, COLORS.muted,
+    );
+  }
   let taxHeight = 0;
   if (settings.taxRegistration) {
     taxHeight = drawWrapped(
       page,
-      `Tax registration: ${normalize(settings.taxRegistration)}`,
+      `GSTIN / Tax registration: ${normalize(settings.taxRegistration)}`,
       layout.left,
       detailsY - businessHeight - addressHeight - 8,
       240,
@@ -457,7 +491,7 @@ function drawTotals(
 export async function generateInvoicePdf(input: InvoicePdfInput): Promise<Buffer> {
   const document = await PDFDocument.create();
   const fonts = await embedFonts(document);
-  const logo = await embedLogo(document);
+  const logo = await embedLogo(document, input.settings.logoUrl);
   const layout: Layout = {
     pageWidth: 595,
     pageHeight: 842,

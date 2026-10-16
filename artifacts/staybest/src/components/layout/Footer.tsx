@@ -83,13 +83,18 @@ export function Footer() {
                 <span className="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
                   <MapPin className="w-4 h-4 text-primary" />
                 </span>
-                <span className="pt-1.5">123 Hospitality Avenue, Mumbai, MH 400001, India</span>
+                <span className="pt-1.5">
+                  No. 68/4, 1st Site No 19 Vajarahalli, Kanakapura Doddakallasandra<br />
+                  District: Bengaluru Urban<br />
+                  State: Karnataka<br />
+                  PIN Code: 560062
+                </span>
               </li>
               <li className="flex items-center gap-3">
                 <span className="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
                   <Phone className="w-4 h-4 text-primary" />
                 </span>
-                <span>+91 98765 43210</span>
+                <span>+91 9035113331</span>
               </li>
               <li className="flex items-center gap-3">
                 <span className="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center shrink-0">

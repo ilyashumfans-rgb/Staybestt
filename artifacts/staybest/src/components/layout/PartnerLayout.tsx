@@ -5,6 +5,7 @@ import { LayoutDashboard, Building2, CalendarCheck, LogOut, ArrowLeft, Wallet, U
 import { BrandLogo } from "@/components/BrandLogo";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { BookingAlerts, disconnectBookingAlerts } from "@/components/partner/BookingAlerts";
 
 interface PartnerLayoutProps {
   children: React.ReactNode;
@@ -84,7 +85,10 @@ export function PartnerLayout({ children, title }: PartnerLayoutProps) {
 
         <div className="p-4 border-t border-white/10">
           <button 
-            onClick={() => signOut({ redirectUrl: basePath || "/" })}
+            onClick={async () => {
+              try { await disconnectBookingAlerts(); }
+              finally { await signOut({ redirectUrl: basePath || "/" }); }
+            }}
             className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-white/70 hover:bg-white/10 hover:text-white w-full transition-colors"
           >
             <LogOut className="w-5 h-5 text-white/50" />
@@ -102,6 +106,7 @@ export function PartnerLayout({ children, title }: PartnerLayoutProps) {
           </Link>
         </header>
         
+        <BookingAlerts />
         <div className="flex-1 overflow-auto p-8">
           {children}
         </div>

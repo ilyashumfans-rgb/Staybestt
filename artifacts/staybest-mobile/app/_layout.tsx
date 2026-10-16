@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Platform, View, Text } from 'react-native';
@@ -103,12 +103,18 @@ function RootLayoutNav() {
 
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY ||
   Constants.expoConfig?.extra?.clerkPublishableKey;
+// Replit-managed production Clerk is reached through the API proxy, not a
+// direct custom-domain connection. Keep development keys on their own host.
+const clerkProxyUrl = process.env.EXPO_PUBLIC_CLERK_PROXY_URL ||
+  (publishableKey === Constants.expoConfig?.extra?.clerkPublishableKey
+    ? Constants.expoConfig?.extra?.clerkProxyUrl : undefined);
 
 export default function RootLayout() {
   return <StartupErrorBoundary><ConfiguredRootLayout /></StartupErrorBoundary>;
 }
 
 function ConfiguredRootLayout() {
+  const [assetTimeout, setAssetTimeout] = useState(false);
   // Load icon families before mounting any screen, not lazily as each icon
   // appears. In particular, FontAwesome5 has separate regular/solid/brand files.
   const [iconsLoaded, iconError] = useFonts({
@@ -128,6 +134,15 @@ function ConfiguredRootLayout() {
   });
 
   useEffect(() => {
+    if ((fontsLoaded || fontError) && (iconsLoaded || iconError)) return;
+    const timer = setTimeout(() => {
+      SplashScreen.hideAsync().catch(() => undefined);
+      setAssetTimeout(true);
+    }, 15000);
+    return () => clearTimeout(timer);
+  }, [fontsLoaded, fontError, iconsLoaded, iconError]);
+
+  useEffect(() => {
     if (((fontsLoaded || fontError) && iconsLoaded) || iconError) {
       SplashScreen.hideAsync().catch(() => undefined);
     }
@@ -135,6 +150,7 @@ function ConfiguredRootLayout() {
 
   // Do not silently render missing-glyph boxes if an icon asset fails to load.
   // The startup boundary provides an explicit error and retry instead.
+  if (assetTimeout && (!iconsLoaded || (!fontsLoaded && !fontError))) throw new Error("Startup assets took too long to load. Please restart StayBest.");
   if (iconError) throw iconError;
   if (!iconsLoaded) return null;
   if (Platform.OS !== 'web' && !fontsLoaded && !fontError) return null;
@@ -149,7 +165,7 @@ function ConfiguredRootLayout() {
   }
 
   return (
-    <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
+    <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache} proxyUrl={clerkProxyUrl}>
       <AuthSetup>
         <SafeAreaProvider>
           <ErrorBoundary>

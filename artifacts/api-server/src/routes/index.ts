@@ -1,4 +1,5 @@
 import { Router, type IRouter } from "express";
+import amenitiesRouter from "./amenities";
 import healthRouter from "./health";
 import homeRouter from "./home";
 import propertiesRouter from "./properties";
@@ -22,6 +23,7 @@ import billingRouter from "./billing";
 import postalDirectoryRouter from "./postalDirectory";
 import propertyDocumentsRouter from "./propertyDocuments";
 import razorpayRouter from "./razorpay";
+import partnerRegistrationRouter from "./partnerRegistration";
 
 const router: IRouter = Router();
 
@@ -31,9 +33,11 @@ router.use(cmsRouter);
 router.use(availabilityRouter);
 router.use(reviewsRouter);
 router.use(propertiesRouter);
+router.use(amenitiesRouter);
 router.use(bookingsRouter);
 router.use(wishlistRouter);
 router.use(meRouter);
+router.use(partnerRegistrationRouter);
 router.use(partnerRouter);
 router.use(customerLoginRouter);
 router.use(employeeRouter);
@@ -49,4 +53,6 @@ router.use(billingRouter);
   router.use(propertyDocumentsRouter);
   router.use(razorpayRouter);
 
+import partnerAlertsRouter from "./partnerAlerts";
+router.use(partnerAlertsRouter);
 export default router;

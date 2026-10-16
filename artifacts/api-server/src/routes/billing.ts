@@ -41,7 +41,7 @@ import {
   normalizeInvoiceBody,
   normalizePaymentBody,
 } from "../lib/invoiceInput";
-import { generateInvoicePdf } from "../lib/invoicePdf";
+import { generateInvoicePdf, readCompanyLogo } from "../lib/invoicePdf";
 import {
   invoiceBookingFromSnapshot,
   type InvoiceBookingSnapshot,
@@ -246,6 +246,9 @@ router.get("/admin/billing-settings", async (_req, res): Promise<void> => {
       businessName: settings.businessName,
       address: settings.address,
       taxRegistration: settings.taxRegistration,
+      email: settings.email,
+      phone: settings.phone,
+      logoUrl: settings.logoUrl,
       updatedAt: toIso(settings.updatedAt),
     }),
   );
@@ -257,6 +260,10 @@ router.put("/admin/billing-settings", async (req, res): Promise<void> => {
     res.status(400).json({ message: parsed.error.message });
     return;
   }
+  if (parsed.data.logoUrl) {
+    try { await readCompanyLogo(parsed.data.logoUrl); }
+    catch { res.status(400).json({ message: "Could not read the company logo. Upload a valid PNG or JPG image again." }); return; }
+  }
   const [settings] = await db
     .insert(billingSettingsTable)
     .values({
@@ -264,6 +271,9 @@ router.put("/admin/billing-settings", async (req, res): Promise<void> => {
       businessName: parsed.data.businessName.trim(),
       address: parsed.data.address.trim(),
       taxRegistration: parsed.data.taxRegistration?.trim() || null,
+      email: parsed.data.email?.trim() || null,
+      phone: parsed.data.phone?.trim() || null,
+      logoUrl: parsed.data.logoUrl || null,
     })
     .onConflictDoUpdate({
       target: billingSettingsTable.id,
@@ -271,6 +281,9 @@ router.put("/admin/billing-settings", async (req, res): Promise<void> => {
         businessName: parsed.data.businessName.trim(),
         address: parsed.data.address.trim(),
         taxRegistration: parsed.data.taxRegistration?.trim() || null,
+        email: parsed.data.email === undefined ? undefined : parsed.data.email?.trim() || null,
+        phone: parsed.data.phone === undefined ? undefined : parsed.data.phone?.trim() || null,
+        logoUrl: parsed.data.logoUrl,
         updatedAt: new Date(),
       },
     })
@@ -281,6 +294,9 @@ router.put("/admin/billing-settings", async (req, res): Promise<void> => {
       businessName: settings!.businessName,
       address: settings!.address,
       taxRegistration: settings!.taxRegistration,
+      email: settings!.email,
+      phone: settings!.phone,
+      logoUrl: settings!.logoUrl,
       updatedAt: toIso(settings!.updatedAt),
     }),
   );

@@ -24,6 +24,9 @@ export const billingSettingsTable = pgTable("billing_settings", {
   businessName: text("business_name").notNull(),
   address: text("address").notNull(),
   taxRegistration: text("tax_registration"),
+  email: text("email"),
+  phone: text("phone"),
+  logoUrl: text("logo_url"),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
     .defaultNow()

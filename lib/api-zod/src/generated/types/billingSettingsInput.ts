@@ -22,4 +22,20 @@ export interface BillingSettingsInput {
      * @nullable
      */
   taxRegistration?: string | null;
+  /**
+     * @maxLength 254
+     * @nullable
+     */
+  email?: string | null;
+  /**
+     * @maxLength 30
+     * @nullable
+     */
+  phone?: string | null;
+  /**
+     * @maxLength 500
+     * @nullable
+     * @pattern ^/api/storage/objects/uploads/[a-zA-Z0-9-]+$
+     */
+  logoUrl?: string | null;
 }

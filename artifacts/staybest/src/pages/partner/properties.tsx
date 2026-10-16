@@ -17,7 +17,8 @@ import {
   getGetPropertyQueryKey,
   useGetMe,
   getGetMeQueryKey,
-  useRegisterPartnerProperty
+  useRegisterPartnerProperty,
+  useListPropertyCategories,
 } from "@workspace/api-client-react";
 import { formatPrice } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -29,6 +30,7 @@ import { Loader2, Edit2, DoorOpen, Plus, Trash2 } from "lucide-react";
 import { useUser } from "@clerk/react";
 import { useAuth } from "@clerk/react";
 import { PropertyImageUploader } from "@/components/PropertyImageUploader";
+import { AmenityPicker } from "@/components/amenities/AmenityPicker";
 import {
   Dialog,
   DialogContent,
@@ -47,23 +49,28 @@ export default function PartnerProperties() {
   const { data: properties, isLoading } = useListPartnerProperties({
     query: { enabled: isPartner, queryKey: getListPartnerPropertiesQueryKey() }
   });
+  const { data: propertyCategories, isLoading: categoriesLoading, isError: categoriesError } = useListPropertyCategories();
 
   const updateProp = useUpdatePartnerProperty();
   const registerProp = useRegisterPartnerProperty();
   const [registerOpen, setRegisterOpen] = useState(false);
   const [agreementPropertyId, setAgreementPropertyId] = useState<number | null>(null);
   const [regForm, setRegForm] = useState({
-    name: "", category: "prime", country: "", state: "", city: "", area: "", pincode: "", latitude: "", longitude: "", landmark: "", address: "",
-    description: "", imageUrl: "", images: "", amenities: "", policies: "", startingPrice: "",
+    name: "", category: "", country: "", state: "", city: "", area: "", pincode: "", latitude: "", longitude: "", landmark: "", address: "",
+    description: "", imageUrl: "", images: "", amenities: [] as string[], policies: "", startingPrice: "",
     freeCancellation: false, breakfastIncluded: false, contactPhone: "", contactEmail: ""
   });
 
   const handleRegister = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!propertyCategories?.some(category => category.slug === regForm.category)) {
+      toast.error("Select an active property category");
+      return;
+    }
     registerProp.mutate({
       data: {
         name: regForm.name.trim(),
-        category: regForm.category as "prime" | "luxury" | "budget" | "package",
+        category: regForm.category,
         country: regForm.country.trim(),
         state: regForm.state.trim(),
         city: regForm.city.trim(),
@@ -73,7 +80,7 @@ export default function PartnerProperties() {
         description: regForm.description.trim(),
         imageUrl: regForm.imageUrl.trim(),
         images: regForm.images.split(",").map((image) => image.trim()).filter(Boolean),
-        amenities: regForm.amenities.split(",").map(x => x.trim()).filter(Boolean),
+        amenities: regForm.amenities,
         policies: regForm.policies.split(",").map(x => x.trim()).filter(Boolean),
         startingPrice: Number(regForm.startingPrice),
         freeCancellation: regForm.freeCancellation,
@@ -89,7 +96,7 @@ export default function PartnerProperties() {
         toast.success(res.message);
         setRegisterOpen(false);
         toast.info("Property registered. Open Property Docs / Agreement below to download, sign and upload it.");
-        setRegForm({ name: "", category: "prime", country: "", state: "", city: "", area: "", pincode: "", latitude: "", longitude: "", landmark: "", address: "", description: "", imageUrl: "", images: "", amenities: "", policies: "", startingPrice: "", freeCancellation: false, breakfastIncluded: false, contactPhone: "", contactEmail: "" });
+        setRegForm({ name: "", category: "", country: "", state: "", city: "", area: "", pincode: "", latitude: "", longitude: "", landmark: "", address: "", description: "", imageUrl: "", images: "", amenities: [], policies: "", startingPrice: "", freeCancellation: false, breakfastIncluded: false, contactPhone: "", contactEmail: "" });
         queryClient.invalidateQueries({ queryKey: getListPartnerPropertiesQueryKey() });
       },
       onError: (err: any) => toast.error(err?.response?.data?.message || err.message || "Failed to submit"),
@@ -104,8 +111,8 @@ export default function PartnerProperties() {
 
   // Property Form State
   const [propFormData, setPropFormData] = useState({
-    name: "", category: "prime", country: "", state: "", city: "", area: "", pincode: "", latitude: "", longitude: "", address: "", description: "",
-    imageUrl: "", images: "", amenities: "", policies: "", 
+    name: "", category: "", country: "", state: "", city: "", area: "", pincode: "", latitude: "", longitude: "", address: "", description: "",
+    imageUrl: "", images: "", amenities: [] as string[], policies: "",
     checkInTime: "14:00", checkOutTime: "11:00", startingPrice: "", 
     freeCancellation: false, breakfastIncluded: false, featured: false
   });
@@ -180,7 +187,7 @@ export default function PartnerProperties() {
       description: fullPropData.description,
       imageUrl: fullPropData.imageUrl,
       images: fullPropData.images.join(", "),
-      amenities: fullPropData.amenities.join(", "),
+      amenities: [...fullPropData.amenities],
       policies: fullPropData.policies.join(", "),
       checkInTime: fullPropData.checkInTime,
       checkOutTime: fullPropData.checkOutTime,
@@ -194,6 +201,11 @@ export default function PartnerProperties() {
   const handlePropSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingPropId) return;
+    if (!propertyCategories?.some(category => category.slug === propFormData.category) &&
+        propFormData.category !== fullPropData?.category) {
+      toast.error("Select an active property category");
+      return;
+    }
 
     const payload = {
       name: propFormData.name,
@@ -209,7 +221,7 @@ export default function PartnerProperties() {
       description: propFormData.description,
       imageUrl: propFormData.imageUrl,
       images: propFormData.images.split(",").map(s => s.trim()).filter(Boolean),
-      amenities: propFormData.amenities.split(",").map(s => s.trim()).filter(Boolean),
+      amenities: propFormData.amenities,
       policies: propFormData.policies.split(",").map(s => s.trim()).filter(Boolean),
       checkInTime: propFormData.checkInTime,
       checkOutTime: propFormData.checkOutTime,
@@ -306,12 +318,13 @@ export default function PartnerProperties() {
               </div>
               <div>
                 <label className="text-sm font-medium mb-1 block">Category *</label>
-                <select value={regForm.category} onChange={e => setRegForm({...regForm, category: e.target.value})} className="w-full h-10 border border-input rounded-md px-3 bg-white">
-                  <option value="prime">Prime</option>
-                  <option value="luxury">Luxury</option>
-                  <option value="budget">Budget</option>
-                  <option value="package">Package</option>
+                <select required value={regForm.category} onChange={e => setRegForm({...regForm, category: e.target.value})} className="w-full h-10 border border-input rounded-md px-3 bg-white">
+                  <option value="" disabled>{categoriesLoading ? "Loading categories..." : "Select a category"}</option>
+                  {propertyCategories?.map(category => (
+                    <option key={category.id} value={category.slug}>{category.name}</option>
+                  ))}
                 </select>
+                {categoriesError && <p className="text-xs text-destructive mt-1">Could not load property categories. Please try again.</p>}
               </div>
               <div>
                 <label className="text-sm font-medium mb-1 block">Starting price (₹/night) *</label>
@@ -341,10 +354,7 @@ export default function PartnerProperties() {
                 <label className="text-sm font-medium mb-1 block">Description *</label>
                 <textarea required rows={3} className="w-full border border-input rounded-md p-3 text-sm" value={regForm.description} onChange={e => setRegForm({...regForm, description: e.target.value})} />
               </div>
-              <div>
-                <label className="text-sm font-medium mb-1 block">Amenities (comma separated)</label>
-                <Input placeholder="Pool, WiFi, Spa" value={regForm.amenities} onChange={e => setRegForm({...regForm, amenities: e.target.value})} />
-              </div>
+              <AmenityPicker value={regForm.amenities} onChange={(amenities) => setRegForm((current) => ({ ...current, amenities }))} />
               <div>
                 <label className="text-sm font-medium mb-1 block">Policies (comma separated)</label>
                 <Input placeholder="No smoking, Pets allowed" value={regForm.policies} onChange={e => setRegForm({...regForm, policies: e.target.value})} />
@@ -364,7 +374,7 @@ export default function PartnerProperties() {
             </div>
             <div className="flex justify-end gap-2 pt-2">
               <Button type="button" variant="outline" onClick={() => setRegisterOpen(false)}>Cancel</Button>
-              <Button type="submit" disabled={registerProp.isPending}>
+              <Button type="submit" disabled={registerProp.isPending || categoriesLoading || categoriesError || !propertyCategories?.length}>
                 {registerProp.isPending ? "Submitting..." : "Submit for approval"}
               </Button>
             </div>
@@ -396,7 +406,7 @@ export default function PartnerProperties() {
                     <div>
                       <p className="font-bold text-secondary text-sm">{prop.name}</p>
                       <div className="flex gap-1 mt-0.5">
-                        <Badge variant="outline" className="text-[10px] py-0 px-1 capitalize">{prop.category}</Badge>
+                        <Badge variant="outline" className="text-[10px] py-0 px-1 capitalize">{propertyCategories?.find(category => category.slug === prop.category)?.name ?? prop.category}</Badge>
                         {prop.status && prop.status !== 'active' && (
                           <Badge variant="outline" className={`text-[10px] py-0 px-1 capitalize ${
                             prop.status === 'pending' ? 'border-amber-200 text-amber-700 bg-amber-50' : 'border-red-200 text-red-700 bg-red-50'
@@ -461,11 +471,14 @@ export default function PartnerProperties() {
                 <div>
                   <label className="text-xs font-bold text-secondary mb-1 block">Category</label>
                   <select required value={propFormData.category} onChange={e => setPropFormData({...propFormData, category: e.target.value})} className="w-full h-11 border border-input rounded-xl px-3 outline-none focus:ring-2 focus:ring-primary">
-                    <option value="prime">Prime</option>
-                    <option value="luxury">Luxury</option>
-                    <option value="budget">Budget</option>
-                    <option value="package">Package</option>
+                    {!propertyCategories?.some(category => category.slug === propFormData.category) && propFormData.category && (
+                      <option value={propFormData.category}>{propFormData.category} (existing)</option>
+                    )}
+                    {propertyCategories?.map(category => (
+                      <option key={category.id} value={category.slug}>{category.name}</option>
+                    ))}
                   </select>
+                  {categoriesError && <p className="text-xs text-destructive mt-1">Could not load current property categories. You can keep the existing category.</p>}
                 </div>
                 <LocationFields
                   strictApproved
@@ -487,10 +500,7 @@ export default function PartnerProperties() {
                   onGalleryChange={(images) => setPropFormData({ ...propFormData, images })}
                   getToken={getToken}
                 />
-                <div>
-                  <label className="text-xs font-bold text-secondary mb-1 block">Amenities (comma separated)</label>
-                  <Input required value={propFormData.amenities} onChange={e => setPropFormData({...propFormData, amenities: e.target.value})} />
-                </div>
+                <AmenityPicker value={propFormData.amenities} onChange={(amenities) => setPropFormData((current) => ({ ...current, amenities }))} />
                 <div>
                   <label className="text-xs font-bold text-secondary mb-1 block">Policies (comma separated)</label>
                   <Input required value={propFormData.policies} onChange={e => setPropFormData({...propFormData, policies: e.target.value})} />
@@ -623,8 +633,7 @@ export default function PartnerProperties() {
                     <Input type="number" required value={roomFormData.totalRooms} onChange={e => setRoomFormData({...roomFormData, totalRooms: e.target.value})} />
                   </div>
                   <div className="col-span-2">
-                    <label className="text-xs font-bold text-secondary mb-1 block">Amenities (comma separated)</label>
-                    <Input required value={roomFormData.amenities} onChange={e => setRoomFormData({...roomFormData, amenities: e.target.value})} />
+                    <AmenityPicker label="Room amenities" value={roomFormData.amenities.split(",").map(value => value.trim()).filter(Boolean)} onChange={amenities => setRoomFormData(current => ({ ...current, amenities: amenities.join(", ") }))} />
                   </div>
                   <div className="col-span-2 flex items-center gap-2 bg-muted/40 border rounded-xl p-3">
                     <input

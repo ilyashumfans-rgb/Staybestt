@@ -1,4 +1,5 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { CompanyLogoUpload } from "@/components/billing/CompanyLogoUpload";
 import { Link, useLocation } from "wouter";
 import { ArrowLeft, Save, Building2 } from "lucide-react";
 import { AdminLayout } from "@/components/layout/AdminLayout";
@@ -18,6 +19,9 @@ const schema = z.object({
   businessName: z.string().min(1, "Business name is required").max(200),
   address: z.string().min(1, "Address is required").max(1000),
   taxRegistration: z.string().max(100).optional().nullable(),
+  email: z.union([z.string().trim().email("Enter a valid email address").max(254), z.literal("")]),
+  phone: z.string().trim().max(30),
+  logoUrl: z.string(),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -25,7 +29,8 @@ type FormValues = z.infer<typeof schema>;
 export default function AdminBillingSettings() {
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
-  const { data: settings, isLoading } = useGetBillingSettings();
+  const { data: settings, isLoading, error, refetch } = useGetBillingSettings();
+  const [uploading, setUploading] = useState(false);
   const updateSettings = useUpdateBillingSettings();
   
   const form = useForm<FormValues>({
@@ -34,6 +39,9 @@ export default function AdminBillingSettings() {
       businessName: "",
       address: "",
       taxRegistration: "",
+      email: "",
+      phone: "",
+      logoUrl: "",
     },
   });
 
@@ -45,13 +53,17 @@ export default function AdminBillingSettings() {
         businessName: settings.businessName,
         address: settings.address,
         taxRegistration: settings.taxRegistration || "",
+        email: settings.email || "",
+        phone: settings.phone || "",
+        logoUrl: settings.logoUrl || "",
       });
       initialized.current = true;
     }
   }, [settings, form]);
 
   const onSubmit = (data: FormValues) => {
-    updateSettings.mutate({ data }, {
+    if (uploading) return;
+    updateSettings.mutate({ data: { ...data, email: data.email || null, phone: data.phone || null, logoUrl: data.logoUrl || null } }, {
       onSuccess: (updated) => {
         toast.success("Billing settings saved successfully");
         queryClient.setQueryData(getGetBillingSettingsQueryKey(), updated);
@@ -64,7 +76,7 @@ export default function AdminBillingSettings() {
   };
 
   return (
-    <AdminLayout title="Billing Settings">
+    <AdminLayout title="Company Billing Profile">
       <div className="max-w-2xl mx-auto">
         <Link href="/admin/billing" className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-primary mb-6">
           <ArrowLeft className="w-4 h-4 mr-1" /> Back to Invoices
@@ -76,7 +88,7 @@ export default function AdminBillingSettings() {
               <Building2 className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-lg font-serif font-bold text-secondary">Company Details</h2>
+              <h2 className="text-lg font-serif font-bold text-secondary">Company Billing Profile</h2>
               <p className="text-sm text-muted-foreground">This information will appear on generated invoice PDFs.</p>
             </div>
           </div>
@@ -87,9 +99,21 @@ export default function AdminBillingSettings() {
               <div className="h-24 bg-muted rounded-md w-full" />
               <div className="h-10 bg-muted rounded-md w-full" />
             </div>
+          ) : error && (error as { status?: number }).status !== 404 ? (
+            <div role="alert">Could not load the company profile. <Button variant="outline" onClick={() => refetch()}>Retry</Button></div>
           ) : (
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                <CompanyLogoUpload value={form.watch("logoUrl")} onChange={value => form.setValue("logoUrl", value, { shouldDirty: true })} onBusy={setUploading} />
+                {(["email", "phone"] as const).map(name => (
+                  <FormField key={name} control={form.control} name={name} render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{name === "email" ? "Company email" : "Company phone"}</FormLabel>
+                      <FormControl><Input {...field} type={name === "email" ? "email" : "tel"} placeholder={name === "email" ? "billing@example.com" : "+91…"} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                ))}
                 <FormField
                   control={form.control}
                   name="businessName"
@@ -123,7 +147,7 @@ export default function AdminBillingSettings() {
                   name="taxRegistration"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Tax Registration Number (Optional)</FormLabel>
+                      <FormLabel>GSTIN / Tax Registration Number (Optional)</FormLabel>
                       <FormControl>
                         <Input placeholder="e.g. GSTIN: 29ABCDE1234F1Z5" {...field} value={field.value || ""} data-testid="input-tax-registration" />
                       </FormControl>
@@ -133,11 +157,11 @@ export default function AdminBillingSettings() {
                 />
                 
                 <div className="pt-4 flex justify-end">
-                  <Button type="submit" disabled={updateSettings.isPending} data-testid="button-save-settings">
+                  <Button type="submit" disabled={updateSettings.isPending || uploading} data-testid="button-save-settings">
                     {updateSettings.isPending ? "Saving..." : (
                       <>
                         <Save className="w-4 h-4 mr-2" />
-                        Save Settings
+                        Save Company Profile
                       </>
                     )}
                   </Button>

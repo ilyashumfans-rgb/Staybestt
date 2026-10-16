@@ -4,6 +4,7 @@ import { dispatchDueCampaigns } from "./routes/marketing";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { importPostalDirectory } from "@workspace/db";
+import { dispatchPartnerPush } from "./lib/partnerPush";
 
 const rawPort = process.env["PORT"];
 
@@ -55,6 +56,8 @@ async function start() {
     }
 
     logger.info({ port }, "Server listening");
+    void dispatchPartnerPush();
+    setInterval(() => { void dispatchPartnerPush(); }, 30_000).unref();
     // Claiming each scheduled row atomically makes this safe with multiple API instances.
     void dispatchDueCampaigns().catch((dispatchError) => logger.error({ err: dispatchError }, "Initial campaign dispatch failed"));
     setInterval(() => {

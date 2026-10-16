@@ -559,14 +559,14 @@ export function requireRole(...roles: string[]) {
       return;
     }
     if (
-      user.role === "agent" &&
+      (user.role === "agent" || user.role === "partner") &&
       (user.status !== "active" || user.approvalStatus !== "approved")
     ) {
       res.status(403).json({
         message:
           user.status === "blocked"
-            ? "Agent account is blocked"
-            : "Agent account is not approved",
+            ? "Account is blocked"
+            : "Account is awaiting approval or was rejected",
       });
       return;
     }

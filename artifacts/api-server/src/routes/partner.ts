@@ -3,6 +3,7 @@ import { and, eq, desc, inArray, sql, gte } from "drizzle-orm";
 import {
   db,
   propertiesTable,
+  propertyCategoriesTable,
   roomsTable,
   bookingsTable,
   seasonalRatesTable,
@@ -43,6 +44,7 @@ import {
   PartnerPasswordLoginResponse,
 } from "@workspace/api-zod";
 import { requireRole } from "../lib/auth";
+import { ONE_TIME_PARTNER_PASSWORD } from "../lib/partnerCredentials";
 import { isValidTimeZone } from "../lib/cancellationPolicy";
 import { toPropertySummary, toPropertyDetail, toRoomDto, toBookingDto } from "../lib/mappers";
 import { propertyLocationExistsInCatalog } from "../lib/locationCatalog";
@@ -77,6 +79,7 @@ function recordLoginFailure(key: string): void {
 }
 
 router.post("/partner/login", async (req, res): Promise<void> => {
+  res.set("Cache-Control", "no-store");
   const parsed = PartnerPasswordLoginBody.safeParse(req.body);
   if (!parsed.success || parsed.data.login.length > 254 || parsed.data.password.length > 128) {
     res.status(401).json({ message: "Wrong username or password" });
@@ -90,7 +93,7 @@ router.post("/partner/login", async (req, res): Promise<void> => {
   }
   const email = id.includes("@") ? id : `${id}@partner.staybest.com`;
   const rows = await db
-    .select({ userId: usersTable.id, password: vendorCredentialsTable.password })
+    .select({ userId: usersTable.id, password: vendorCredentialsTable.password, approvalStatus: usersTable.approvalStatus })
     .from(usersTable)
     .innerJoin(vendorCredentialsTable, eq(vendorCredentialsTable.userId, usersTable.id))
     .where(
@@ -102,11 +105,24 @@ router.post("/partner/login", async (req, res): Promise<void> => {
     )
     .limit(1);
   const match = rows[0];
-  if (!match || match.password !== parsed.data.password) {
+  let valid = !!match && match.password === parsed.data.password;
+  if (match?.password === ONE_TIME_PARTNER_PASSWORD) {
+    try {
+      await clerkClient.users.verifyPassword({ userId: match.userId, password: parsed.data.password });
+      valid = true;
+    } catch { valid = false; }
+  }
+  if (!match || !valid) {
     recordLoginFailure(rateKey);
     // Small delay to slow down guessing.
     await new Promise((r) => setTimeout(r, 500));
     res.status(401).json({ message: "Wrong username or password" });
+    return;
+  }
+  if (match.approvalStatus !== "approved") {
+    res.status(403).json({ message: match.approvalStatus === "pending"
+      ? "Your partner registration is awaiting admin approval. Keep your saved login details and try again after approval."
+      : "Your partner registration was rejected. Please contact StayBest." });
     return;
   }
   const token = await clerkClient.signInTokens.createSignInToken({
@@ -452,6 +468,15 @@ router.post("/partner/properties/register", async (req, res): Promise<void> => {
     return;
   }
   const d = body.data;
+  const [activeCategory] = await db
+    .select({ id: propertyCategoriesTable.id })
+    .from(propertyCategoriesTable)
+    .where(and(eq(propertyCategoriesTable.slug, d.category), eq(propertyCategoriesTable.active, true)))
+    .limit(1);
+  if (!activeCategory) {
+    res.status(400).json({ message: "Select an active property category" });
+    return;
+  }
   if (d.pincode !== undefined && d.pincode !== "" && !/^\d{6}$/.test(d.pincode.trim())) {
     res.status(400).json({ message: "Pincode must be exactly 6 digits" });
     return;
@@ -522,6 +547,17 @@ router.put("/partner/properties/:id", async (req, res): Promise<void> => {
   if (property.ownerId !== req.currentUser!.id) {
     res.status(403).json({ message: "You do not own this property" });
     return;
+  }
+  if (body.data.category !== property.category) {
+    const [activeCategory] = await db
+      .select({ id: propertyCategoriesTable.id })
+      .from(propertyCategoriesTable)
+      .where(and(eq(propertyCategoriesTable.slug, body.data.category), eq(propertyCategoriesTable.active, true)))
+      .limit(1);
+    if (!activeCategory) {
+      res.status(400).json({ message: "Select an active property category" });
+      return;
+    }
   }
   if (body.data.pincode !== undefined && body.data.pincode !== "" && !/^\d{6}$/.test(body.data.pincode.trim())) {
     res.status(400).json({ message: "Pincode must be exactly 6 digits" });

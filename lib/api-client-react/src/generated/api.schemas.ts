@@ -5,6 +5,91 @@
  * StayBest resort & hotel booking API
  * OpenAPI spec version: 0.1.0
  */
+export type PartnerPushSubscriptionInputKeys = {
+  /** @pattern ^[A-Za-z0-9_-]{87}=?$ */
+  p256dh: string;
+  /** @pattern ^[A-Za-z0-9_-]{22}(==)?$ */
+  auth: string;
+};
+
+export interface PartnerPushSubscriptionInput {
+  /** @maxLength 2048 */
+  endpoint: string;
+  keys: PartnerPushSubscriptionInputKeys;
+}
+
+export interface PartnerPushUnsubscribeInput {
+  /** @maxLength 2048 */
+  endpoint: string;
+}
+
+export interface PartnerBookingAlert {
+  id: number;
+  bookingId: number;
+  propertyName: string;
+  /** @nullable */
+  bookingRef: string | null;
+  checkIn: string;
+}
+
+export interface AmenityCategoryInput {
+  /**
+     * @minLength 1
+     * @maxLength 80
+     */
+  name: string;
+}
+
+export type AmenityInputIcon = typeof AmenityInputIcon[keyof typeof AmenityInputIcon];
+
+
+export const AmenityInputIcon = {
+  pool: 'pool',
+  lawn: 'lawn',
+  breakfast: 'breakfast',
+  wifi: 'wifi',
+  theatre: 'theatre',
+  bbq: 'bbq',
+  bonfire: 'bonfire',
+  gazebo: 'gazebo',
+  games: 'games',
+  bar: 'bar',
+  tv: 'tv',
+  music: 'music',
+  balcony: 'balcony',
+  ac: 'ac',
+  refrigerator: 'refrigerator',
+  water: 'water',
+  check: 'check',
+} as const;
+
+export interface AmenityInput {
+  /** @minimum 1 */
+  categoryId: number;
+  /**
+     * @minLength 1
+     * @maxLength 80
+     */
+  name: string;
+  icon: AmenityInputIcon;
+}
+
+export interface AmenityOption {
+  id: number;
+  name: string;
+  icon: string;
+}
+
+export interface AmenityGroup {
+  id: number;
+  name: string;
+  amenities: AmenityOption[];
+}
+
+export interface AmenityCatalog {
+  categories: AmenityGroup[];
+}
+
 export interface BillingSettingsInput {
   /**
      * @minLength 1
@@ -21,6 +106,22 @@ export interface BillingSettingsInput {
      * @nullable
      */
   taxRegistration?: string | null;
+  /**
+     * @maxLength 254
+     * @nullable
+     */
+  email?: string | null;
+  /**
+     * @maxLength 30
+     * @nullable
+     */
+  phone?: string | null;
+  /**
+     * @maxLength 500
+     * @nullable
+     * @pattern ^/api/storage/objects/uploads/[a-zA-Z0-9-]+$
+     */
+  logoUrl?: string | null;
 }
 
 export type BillingSettings = BillingSettingsInput & {
@@ -376,6 +477,58 @@ export const PropertyStatusInputStatus = {
 
 export interface PropertyStatusInput {
   status: PropertyStatusInputStatus;
+}
+
+export interface PartnerRegistrationInput {
+  /**
+     * @minLength 2
+     * @maxLength 100
+     */
+  name: string;
+  /**
+     * @minLength 7
+     * @maxLength 20
+     */
+  phone: string;
+  /**
+     * @minLength 2
+     * @maxLength 150
+     */
+  businessName: string;
+  /**
+     * @minLength 2
+     * @maxLength 100
+     */
+  city: string;
+}
+
+export interface PartnerRegistrationResult {
+  username: string;
+  password: string;
+  message: string;
+}
+
+export type PartnerApprovalInputStatus = typeof PartnerApprovalInputStatus[keyof typeof PartnerApprovalInputStatus];
+
+
+export const PartnerApprovalInputStatus = {
+  approved: 'approved',
+  rejected: 'rejected',
+} as const;
+
+export interface PartnerApprovalInput {
+  status: PartnerApprovalInputStatus;
+}
+
+export interface PartnerApplication {
+  id: string;
+  username: string;
+  name: string;
+  phone: string;
+  businessName: string;
+  city: string;
+  status: string;
+  createdAt: string;
 }
 
 export interface CreateVendorInput {
@@ -2649,6 +2802,10 @@ export interface TravelAssistantResult {
  * Short-lived scoped checkout bearer. Authorization: Bearer with the same token is also accepted; sending both with different values is rejected.
  */
 export type MobileCheckoutTokenHeaderParameter = string;
+
+export type GetPartnerAlertsConfig200 = {
+  publicKey: string;
+};
 
 export type ListAdminPropertyDocumentPropertiesParams = {
 search?: string;

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { AmenityPicker } from "@/components/amenities/AmenityPicker";
 import { useParams, Link } from "wouter";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { 
@@ -159,8 +160,7 @@ export default function AdminRooms() {
                   <Input type="number" required value={formData.totalRooms} onChange={e => setFormData({...formData, totalRooms: e.target.value})} />
                 </div>
                 <div className="col-span-2">
-                  <label className="text-xs font-bold text-secondary mb-1 block">Amenities (comma separated)</label>
-                  <Input required value={formData.amenities} onChange={e => setFormData({...formData, amenities: e.target.value})} />
+                  <AmenityPicker allowCatalogAdd label="Room amenities" value={formData.amenities.split(",").map(value => value.trim()).filter(Boolean)} onChange={amenities => setFormData(current => ({ ...current, amenities: amenities.join(", ") }))} />
                 </div>
               </div>
               <div className="flex justify-end gap-2 pt-4">

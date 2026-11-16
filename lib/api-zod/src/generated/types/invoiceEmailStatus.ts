@@ -9,6 +9,6 @@ import type { InvoiceEmailStatusStatus } from './invoiceEmailStatusStatus';
 
 export interface InvoiceEmailStatus {
   status: InvoiceEmailStatusStatus;
-  configured: false;
+  configured: boolean;
   message: string;
 }

@@ -1,11 +1,11 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { StyleSheet, View, Pressable, ScrollView, ActivityIndicator } from 'react-native';
 import { useColors } from '@/hooks/useColors';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather, FontAwesome5 } from '@expo/vector-icons';
-import { useSearchProperties, getSearchPropertiesQueryKey } from '@workspace/api-client-react';
+import { useSearchProperties, getSearchPropertiesQueryKey, useListPropertyCategories } from '@workspace/api-client-react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { PropertyCard } from '@/components/PropertyCard';
 
@@ -27,7 +27,12 @@ export default function HotelListScreen() {
     sort?: string;
   }>();
 
+  const { data: categories = [] } = useListPropertyCategories();
+  const [subcategory, setSubcategory] = useState<string | undefined>();
+  useEffect(() => setSubcategory(undefined), [category]);
+  const currentCategory = categories.find(item => item.slug === category);
   const searchParams = {
+    subcategory,
     q,
     city: city || undefined,
     country: country || undefined,
@@ -46,6 +51,7 @@ export default function HotelListScreen() {
   );
 
   const getCategoryName = () => {
+    if (currentCategory) return currentCategory.name;
     switch (category) {
       case 'budget': return 'Budget Hotels';
       case 'prime': return 'Premium Hotels';
@@ -68,9 +74,19 @@ export default function HotelListScreen() {
         </View>
       </View>
 
+      {!!currentCategory?.subcategories?.length && <View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ padding: 16, gap: 10 }}>
+          {currentCategory.subcategories.map(name => <Pressable key={name}
+            accessibilityRole="checkbox" accessibilityState={{ checked: subcategory === name }}
+            onPress={() => setSubcategory(subcategory === name ? undefined : name)}
+            style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 20, padding: 10, backgroundColor: subcategory === name ? colors.primary : colors.card }}>
+            <ThemedText type="caption" color={subcategory === name ? "#fff" : colors.foreground}>{name}</ThemedText>
+          </Pressable>)}
+        </ScrollView>
+      </View>}
       <View style={[styles.subHeader, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
         <ThemedText weight="medium">
-          {isLoading ? 'Searching...' : `${properties?.length || 0} Hotels Found`}
+          {isLoading ? 'Searching...' : `${properties?.length || 0} Properties Found`}
         </ThemedText>
         <View style={styles.actions}>
           <Pressable style={styles.actionBtn}>

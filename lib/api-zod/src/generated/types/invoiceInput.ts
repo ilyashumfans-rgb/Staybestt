@@ -5,9 +5,11 @@
  * StayBest resort & hotel booking API
  * OpenAPI spec version: 0.1.0
  */
+import type { InvoiceInputGstMode } from './invoiceInputGstMode';
 import type { InvoiceLineInput } from './invoiceLineInput';
 
 export interface InvoiceInput {
+  gstMode?: InvoiceInputGstMode;
   /** @nullable */
   bookingId?: number | null;
   /**

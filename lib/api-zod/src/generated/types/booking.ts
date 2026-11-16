@@ -10,6 +10,9 @@ import type { BookingStatus } from './bookingStatus';
 import type { PaymentSummary } from './paymentSummary';
 
 export interface Booking {
+  gstRateBps?: number;
+  gstMode?: string;
+  gstTaxMinor?: number;
   id: number;
   /** @nullable */
   bookingRef: string | null;

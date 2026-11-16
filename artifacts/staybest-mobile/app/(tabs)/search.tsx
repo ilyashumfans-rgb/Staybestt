@@ -18,6 +18,7 @@ export default function SearchScreen() {
 
   const [query, setQuery] = useState((params.city as string) || '');
   const [selectedCategory, setSelectedCategory] = useState<string | null>((params.category as string) || null);
+  const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
   const [isLocating, setIsLocating] = useState(false);
   const [nearby, setNearby] = useState<{ latitude: number; longitude: number } | null>(null);
   
@@ -27,6 +28,7 @@ export default function SearchScreen() {
   const searchParams = {
     q: debouncedQuery,
     category: selectedCategory || undefined,
+    subcategory: selectedSubcategory || undefined,
     latitude: nearby?.latitude,
     longitude: nearby?.longitude,
     radiusKm: nearby ? 50 : undefined,
@@ -122,7 +124,7 @@ export default function SearchScreen() {
             </ThemedText>
           </Pressable>
           <Pressable
-            onPress={() => setSelectedCategory(null)}
+            onPress={() => { setSelectedCategory(null); setSelectedSubcategory(null); }}
             style={[
               styles.filterChip,
               {
@@ -140,7 +142,7 @@ export default function SearchScreen() {
             return (
               <Pressable
                 key={category.id}
-                onPress={() => setSelectedCategory(isSelected ? null : category.slug)}
+                onPress={() => { setSelectedCategory(isSelected ? null : category.slug); setSelectedSubcategory(null); }}
                 style={[
                   styles.filterChip,
                   { 
@@ -161,6 +163,17 @@ export default function SearchScreen() {
             );
           })}
         </ScrollView>
+        {!!categories.find(category => category.slug === selectedCategory)?.subcategories?.length && (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
+            {categories.find(category => category.slug === selectedCategory)?.subcategories?.map(name => (
+              <Pressable key={name} accessibilityRole="checkbox" accessibilityState={{ checked: selectedSubcategory === name }}
+                onPress={() => setSelectedSubcategory(selectedSubcategory === name ? null : name)}
+                style={[styles.filterChip, { backgroundColor: selectedSubcategory === name ? colors.primary : colors.card, borderColor: colors.border }]}>
+                <ThemedText type="caption" color={selectedSubcategory === name ? "#fff" : colors.foreground}>{name}</ThemedText>
+              </Pressable>
+            ))}
+          </ScrollView>
+        )}
       </View>
 
       <ScrollView 

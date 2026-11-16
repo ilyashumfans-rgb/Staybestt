@@ -6,8 +6,12 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { Room } from './room';
+import type { RoomAvailabilityGstMode } from './roomAvailabilityGstMode';
 
 export interface RoomAvailability {
+  baseTotalPrice?: number;
+  gstRateBps?: number;
+  gstMode?: RoomAvailabilityGstMode;
   room: Room;
   availableRooms: number;
   nights: number;

@@ -5,8 +5,15 @@
  * StayBest resort & hotel booking API
  * OpenAPI spec version: 0.1.0
  */
+import type { BillingSettingsInputGstMode } from './billingSettingsInputGstMode';
 
 export interface BillingSettingsInput {
+  /**
+     * @minimum 0
+     * @maximum 10000
+     */
+  gstRateBps?: number;
+  gstMode?: BillingSettingsInputGstMode;
   /**
      * @minLength 1
      * @maxLength 200

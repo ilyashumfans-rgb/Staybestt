@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import {
   useGetProperty,
+  calculateGst,
   getGetPropertyQueryKey,
   useCreateBooking,
   useGetAvailability,
@@ -62,8 +63,9 @@ export default function ConfirmBookingScreen() {
 
   const isFormValid = guestName.trim().length > 0 && guestEmail.trim().length > 3;
 
-  const roomTariff = (roomAvailability?.totalPrice || 0) * roomsCount;
-  const totalPayable = roomTariff;
+  const roomTariff = (roomAvailability?.baseTotalPrice ?? roomAvailability?.totalPrice ?? 0) * roomsCount;
+  const gst = calculateGst(Math.round(roomTariff * 100), roomAvailability?.gstRateBps ?? 0, roomAvailability?.gstMode ?? "exclusive");
+  const totalPayable = gst.totalMinor / 100;
   const [savedBooking, setSavedBooking] = useState<SavedBooking | null>(null);
   const [draftLoaded, setDraftLoaded] = useState(false);
   const [persistingBooking, setPersistingBooking] = useState(false);
@@ -282,8 +284,8 @@ export default function ConfirmBookingScreen() {
                 <ThemedText weight="medium">₹{roomTariff.toLocaleString()}</ThemedText>
               </View>
               <View style={styles.priceRowItem}>
-                <ThemedText color={colors.mutedForeground}>Taxes & fees</ThemedText>
-                <ThemedText weight="medium">Included in total</ThemedText>
+                <ThemedText color={colors.mutedForeground}>GST {(roomAvailability?.gstRateBps ?? 0) / 100}% ({roomAvailability?.gstMode === "inclusive" ? "included" : "added"})</ThemedText>
+                <ThemedText weight="medium">₹{(gst.taxMinor / 100).toLocaleString()}</ThemedText>
               </View>
               <View style={[styles.totalRow, { borderTopColor: colors.border }]}>
                 <ThemedText weight="bold" type="subtitle">Total Payable</ThemedText>

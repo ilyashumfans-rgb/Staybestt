@@ -166,6 +166,7 @@ export default function PropertyDetailScreen() {
           <View style={styles.titleRow}>
             <ThemedText type="title" weight="bold" style={{ flex: 1 }}>{property.name}</ThemedText>
           </View>
+          {!!property.subcategories?.length && <ThemedText type="caption">{property.subcategories.join(" · ")}</ThemedText>}
           
           <ThemedText color={colors.mutedForeground} style={styles.address}>
             {property.address}
@@ -231,6 +232,7 @@ export default function PropertyDetailScreen() {
                   <Image source={{ uri: getImageUrl(room.imageUrl) }} style={styles.roomImage} contentFit="cover" cachePolicy="memory-disk" transition={180} />
                   <View style={styles.roomContent}>
                     <ThemedText weight="bold">{room.name}</ThemedText>
+                    {!!room.subcategories?.length && <ThemedText type="caption">{room.subcategories.join(" · ")}</ThemedText>}
                     <ThemedText type="caption" color={colors.mutedForeground}>
                       Up to {room.maxGuests} guests
                     </ThemedText>

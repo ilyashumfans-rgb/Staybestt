@@ -18,6 +18,10 @@ state?: string;
  * Comma-separated categories (prime,luxury,budget,package)
  */
 category?: string;
+/**
+ * Match a property or available room with this subcategory.
+ */
+subcategory?: string;
 minPrice?: number;
 maxPrice?: number;
 minRating?: number;

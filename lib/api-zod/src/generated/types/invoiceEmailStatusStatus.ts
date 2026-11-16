@@ -11,4 +11,9 @@ export type InvoiceEmailStatusStatus = typeof InvoiceEmailStatusStatus[keyof typ
 
 export const InvoiceEmailStatusStatus = {
   unavailable: 'unavailable',
+  pending: 'pending',
+  sent: 'sent',
+  failed: 'failed',
+  skipped: 'skipped',
+  not_queued: 'not_queued',
 } as const;

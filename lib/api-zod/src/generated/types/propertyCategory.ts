@@ -5,8 +5,10 @@
  * StayBest resort & hotel booking API
  * OpenAPI spec version: 0.1.0
  */
+import type { SubcategorySelection } from './subcategorySelection';
 
 export interface PropertyCategory {
+  subcategories?: SubcategorySelection;
   id: number;
   name: string;
   slug: string;

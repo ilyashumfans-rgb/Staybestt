@@ -5,6 +5,61 @@
  * StayBest resort & hotel booking API
  * OpenAPI spec version: 0.1.0
  */
+export interface AdminAgentLogin {
+  userId?: string;
+  username: string;
+  email: string;
+  passwordEnabled: boolean;
+  canReset: boolean;
+}
+
+export interface AgentPasswordInput {
+  /**
+     * @minLength 3
+     * @maxLength 30
+     * @pattern ^[a-z0-9][a-z0-9._-]{2,29}$
+     */
+  username: string;
+  /**
+     * @minLength 8
+     * @maxLength 128
+     */
+  password?: string;
+}
+
+export interface AgentAgreementTemplate {
+  /**
+     * @minLength 100
+     * @maxLength 50000
+     */
+  template: string;
+  /** @maxLength 100 */
+  cin: string;
+  /** @maxLength 200 */
+  signatory: string;
+  /** @maxLength 200 */
+  designation: string;
+}
+
+export interface AgentAgreementDetails {
+  /** @maxLength 200 */
+  fullName: string;
+  /** @maxLength 300 */
+  email: string;
+  /** @maxLength 200 */
+  fatherName: string;
+  /** @maxLength 2000 */
+  address: string;
+  /** @maxLength 100 */
+  mobile: string;
+  /** @maxLength 100 */
+  pan: string;
+  /** @maxLength 2000 */
+  bank: string;
+  /** @maxLength 300 */
+  commission: string;
+}
+
 export type PartnerPushSubscriptionInputKeys = {
   /** @pattern ^[A-Za-z0-9_-]{87}=?$ */
   p256dh: string;
@@ -90,7 +145,21 @@ export interface AmenityCatalog {
   categories: AmenityGroup[];
 }
 
+export type BillingSettingsInputGstMode = typeof BillingSettingsInputGstMode[keyof typeof BillingSettingsInputGstMode];
+
+
+export const BillingSettingsInputGstMode = {
+  inclusive: 'inclusive',
+  exclusive: 'exclusive',
+} as const;
+
 export interface BillingSettingsInput {
+  /**
+     * @minimum 0
+     * @maximum 10000
+     */
+  gstRateBps?: number;
+  gstMode?: BillingSettingsInputGstMode;
   /**
      * @minLength 1
      * @maxLength 200
@@ -154,7 +223,16 @@ export interface InvoiceLineInput {
   taxRateBps?: number;
 }
 
+export type InvoiceInputGstMode = typeof InvoiceInputGstMode[keyof typeof InvoiceInputGstMode];
+
+
+export const InvoiceInputGstMode = {
+  inclusive: 'inclusive',
+  exclusive: 'exclusive',
+} as const;
+
 export interface InvoiceInput {
+  gstMode?: InvoiceInputGstMode;
   /** @nullable */
   bookingId?: number | null;
   /**
@@ -421,11 +499,16 @@ export type InvoiceEmailStatusStatus = typeof InvoiceEmailStatusStatus[keyof typ
 
 export const InvoiceEmailStatusStatus = {
   unavailable: 'unavailable',
+  pending: 'pending',
+  sent: 'sent',
+  failed: 'failed',
+  skipped: 'skipped',
+  not_queued: 'not_queued',
 } as const;
 
 export interface InvoiceEmailStatus {
   status: InvoiceEmailStatusStatus;
-  configured: false;
+  configured: boolean;
   message: string;
 }
 
@@ -927,7 +1010,15 @@ export interface BusinessReports {
   refunds: RefundReport;
 }
 
+/**
+ * @maxItems 50
+ * @items.minLength 1
+ * @items.maxLength 80
+ */
+export type SubcategorySelection = string[];
+
 export interface PartnerPropertyInput {
+  subcategories?: SubcategorySelection;
   /** @minLength 1 */
   name: string;
   /** Managed property category slug */
@@ -1247,6 +1338,7 @@ export interface PromoBanner {
 }
 
 export interface PropertySummary {
+  subcategories?: SubcategorySelection;
   /** pending | approved | active | suspended | rejected */
   status?: string;
   id: number;
@@ -1440,6 +1532,7 @@ export interface PostalDirectoryApprovalResult {
 }
 
 export interface PropertyCategory {
+  subcategories?: SubcategorySelection;
   id: number;
   name: string;
   slug: string;
@@ -1450,6 +1543,7 @@ export interface PropertyCategory {
 }
 
 export interface PropertyCategoryInput {
+  subcategories?: SubcategorySelection;
   /** @minLength 1 */
   name: string;
   /**
@@ -1491,6 +1585,7 @@ export interface DestinationInput {
 }
 
 export interface Room {
+  subcategories?: SubcategorySelection;
   isAvailable?: boolean;
   id: number;
   propertyId: number;
@@ -1524,7 +1619,18 @@ export type PropertyDetail = PropertySummary & ({
   rooms: Room[];
 });
 
+export type RoomAvailabilityGstMode = typeof RoomAvailabilityGstMode[keyof typeof RoomAvailabilityGstMode];
+
+
+export const RoomAvailabilityGstMode = {
+  inclusive: 'inclusive',
+  exclusive: 'exclusive',
+} as const;
+
 export interface RoomAvailability {
+  baseTotalPrice?: number;
+  gstRateBps?: number;
+  gstMode?: RoomAvailabilityGstMode;
   room: Room;
   availableRooms: number;
   nights: number;
@@ -1579,6 +1685,7 @@ export interface BookingInput {
 }
 
 export interface AgentPropertyInput {
+  subcategories?: SubcategorySelection;
   /** @minLength 1 */
   name: string;
   category: string;
@@ -2027,6 +2134,9 @@ export interface PaymentSummary {
 }
 
 export interface Booking {
+  gstRateBps?: number;
+  gstMode?: string;
+  gstTaxMinor?: number;
   id: number;
   /** @nullable */
   bookingRef: string | null;
@@ -2277,6 +2387,7 @@ export interface BookingStatusInput {
 }
 
 export interface PropertyInput {
+  subcategories?: SubcategorySelection;
   ownerId?: string | null;
   /** @minLength 1 */
   name: string;
@@ -2326,6 +2437,7 @@ export interface PropertyInput {
 }
 
 export interface RoomInput {
+  subcategories?: SubcategorySelection;
   propertyId: number;
   /** @minLength 1 */
   name: string;
@@ -3053,6 +3165,10 @@ state?: string;
  * Comma-separated categories (prime,luxury,budget,package)
  */
 category?: string;
+/**
+ * Match a property or available room with this subcategory.
+ */
+subcategory?: string;
 minPrice?: number;
 maxPrice?: number;
 minRating?: number;
@@ -3117,6 +3233,11 @@ email?: string;
 /**
  * High-entropy booking reference required with email for guest lookup.
  */
+bookingRef?: string;
+};
+
+export type DownloadBookingInvoiceParams = {
+email?: string;
 bookingRef?: string;
 };
 

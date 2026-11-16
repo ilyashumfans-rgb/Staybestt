@@ -8,6 +8,335 @@
 import * as zod from 'zod/v4';
 
 
+export const getSharedAgentAgreementResponseTemplateMin = 100;
+export const getSharedAgentAgreementResponseTemplateMax = 50000;
+
+export const getSharedAgentAgreementResponseCinMax = 100;
+
+export const getSharedAgentAgreementResponseSignatoryMax = 200;
+
+export const getSharedAgentAgreementResponseDesignationMax = 200;
+
+
+
+export const GetSharedAgentAgreementResponse = zod.object({
+  "template": zod.string().min(getSharedAgentAgreementResponseTemplateMin).max(getSharedAgentAgreementResponseTemplateMax),
+  "cin": zod.string().max(getSharedAgentAgreementResponseCinMax),
+  "signatory": zod.string().max(getSharedAgentAgreementResponseSignatoryMax),
+  "designation": zod.string().max(getSharedAgentAgreementResponseDesignationMax)
+})
+
+
+export const saveSharedAgentAgreementBodyTemplateMin = 100;
+export const saveSharedAgentAgreementBodyTemplateMax = 50000;
+
+export const saveSharedAgentAgreementBodyCinMax = 100;
+
+export const saveSharedAgentAgreementBodySignatoryMax = 200;
+
+export const saveSharedAgentAgreementBodyDesignationMax = 200;
+
+
+
+export const SaveSharedAgentAgreementBody = zod.object({
+  "template": zod.string().min(saveSharedAgentAgreementBodyTemplateMin).max(saveSharedAgentAgreementBodyTemplateMax),
+  "cin": zod.string().max(saveSharedAgentAgreementBodyCinMax),
+  "signatory": zod.string().max(saveSharedAgentAgreementBodySignatoryMax),
+  "designation": zod.string().max(saveSharedAgentAgreementBodyDesignationMax)
+})
+
+export const saveSharedAgentAgreementResponseTemplateMin = 100;
+export const saveSharedAgentAgreementResponseTemplateMax = 50000;
+
+export const saveSharedAgentAgreementResponseCinMax = 100;
+
+export const saveSharedAgentAgreementResponseSignatoryMax = 200;
+
+export const saveSharedAgentAgreementResponseDesignationMax = 200;
+
+
+
+export const SaveSharedAgentAgreementResponse = zod.object({
+  "template": zod.string().min(saveSharedAgentAgreementResponseTemplateMin).max(saveSharedAgentAgreementResponseTemplateMax),
+  "cin": zod.string().max(saveSharedAgentAgreementResponseCinMax),
+  "signatory": zod.string().max(saveSharedAgentAgreementResponseSignatoryMax),
+  "designation": zod.string().max(saveSharedAgentAgreementResponseDesignationMax)
+})
+
+
+export const GetAdminAgentLoginParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const GetAdminAgentLoginResponse = zod.object({
+  "userId": zod.string().optional(),
+  "username": zod.string(),
+  "email": zod.string(),
+  "passwordEnabled": zod.boolean(),
+  "canReset": zod.boolean()
+})
+
+
+export const UpdateAdminAgentLoginParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const updateAdminAgentLoginBodyUsernameMin = 3;
+export const updateAdminAgentLoginBodyUsernameMax = 30;
+
+
+export const updateAdminAgentLoginBodyUsernameRegExp = new RegExp('^[a-z0-9][a-z0-9._-]{2,29}$');
+export const updateAdminAgentLoginBodyPasswordMin = 8;
+export const updateAdminAgentLoginBodyPasswordMax = 128;
+
+
+
+export const UpdateAdminAgentLoginBody = zod.object({
+  "username": zod.string().min(updateAdminAgentLoginBodyUsernameMin).max(updateAdminAgentLoginBodyUsernameMax).regex(updateAdminAgentLoginBodyUsernameRegExp),
+  "password": zod.string().min(updateAdminAgentLoginBodyPasswordMin).max(updateAdminAgentLoginBodyPasswordMax).optional()
+})
+
+export const UpdateAdminAgentLoginResponse = zod.object({
+  "userId": zod.string().optional(),
+  "username": zod.string(),
+  "email": zod.string(),
+  "passwordEnabled": zod.boolean(),
+  "canReset": zod.boolean()
+})
+
+
+export const GetAgentAgreementDetailsParams = zod.object({
+  "agentId": zod.coerce.string()
+})
+
+export const getAgentAgreementDetailsResponseFullNameMax = 200;
+
+export const getAgentAgreementDetailsResponseEmailMax = 300;
+
+export const getAgentAgreementDetailsResponseFatherNameMax = 200;
+
+export const getAgentAgreementDetailsResponseAddressMax = 2000;
+
+export const getAgentAgreementDetailsResponseMobileMax = 100;
+
+export const getAgentAgreementDetailsResponsePanMax = 100;
+
+export const getAgentAgreementDetailsResponseBankMax = 2000;
+
+export const getAgentAgreementDetailsResponseCommissionMax = 300;
+
+
+
+export const GetAgentAgreementDetailsResponse = zod.object({
+  "fullName": zod.string().max(getAgentAgreementDetailsResponseFullNameMax),
+  "email": zod.string().max(getAgentAgreementDetailsResponseEmailMax),
+  "fatherName": zod.string().max(getAgentAgreementDetailsResponseFatherNameMax),
+  "address": zod.string().max(getAgentAgreementDetailsResponseAddressMax),
+  "mobile": zod.string().max(getAgentAgreementDetailsResponseMobileMax),
+  "pan": zod.string().max(getAgentAgreementDetailsResponsePanMax),
+  "bank": zod.string().max(getAgentAgreementDetailsResponseBankMax),
+  "commission": zod.string().max(getAgentAgreementDetailsResponseCommissionMax)
+})
+
+
+export const SaveAgentAgreementDetailsParams = zod.object({
+  "agentId": zod.coerce.string()
+})
+
+export const saveAgentAgreementDetailsBodyFullNameMax = 200;
+
+export const saveAgentAgreementDetailsBodyEmailMax = 300;
+
+export const saveAgentAgreementDetailsBodyFatherNameMax = 200;
+
+export const saveAgentAgreementDetailsBodyAddressMax = 2000;
+
+export const saveAgentAgreementDetailsBodyMobileMax = 100;
+
+export const saveAgentAgreementDetailsBodyPanMax = 100;
+
+export const saveAgentAgreementDetailsBodyBankMax = 2000;
+
+export const saveAgentAgreementDetailsBodyCommissionMax = 300;
+
+
+
+export const SaveAgentAgreementDetailsBody = zod.object({
+  "fullName": zod.string().max(saveAgentAgreementDetailsBodyFullNameMax),
+  "email": zod.string().max(saveAgentAgreementDetailsBodyEmailMax),
+  "fatherName": zod.string().max(saveAgentAgreementDetailsBodyFatherNameMax),
+  "address": zod.string().max(saveAgentAgreementDetailsBodyAddressMax),
+  "mobile": zod.string().max(saveAgentAgreementDetailsBodyMobileMax),
+  "pan": zod.string().max(saveAgentAgreementDetailsBodyPanMax),
+  "bank": zod.string().max(saveAgentAgreementDetailsBodyBankMax),
+  "commission": zod.string().max(saveAgentAgreementDetailsBodyCommissionMax)
+})
+
+export const saveAgentAgreementDetailsResponseFullNameMax = 200;
+
+export const saveAgentAgreementDetailsResponseEmailMax = 300;
+
+export const saveAgentAgreementDetailsResponseFatherNameMax = 200;
+
+export const saveAgentAgreementDetailsResponseAddressMax = 2000;
+
+export const saveAgentAgreementDetailsResponseMobileMax = 100;
+
+export const saveAgentAgreementDetailsResponsePanMax = 100;
+
+export const saveAgentAgreementDetailsResponseBankMax = 2000;
+
+export const saveAgentAgreementDetailsResponseCommissionMax = 300;
+
+
+
+export const SaveAgentAgreementDetailsResponse = zod.object({
+  "fullName": zod.string().max(saveAgentAgreementDetailsResponseFullNameMax),
+  "email": zod.string().max(saveAgentAgreementDetailsResponseEmailMax),
+  "fatherName": zod.string().max(saveAgentAgreementDetailsResponseFatherNameMax),
+  "address": zod.string().max(saveAgentAgreementDetailsResponseAddressMax),
+  "mobile": zod.string().max(saveAgentAgreementDetailsResponseMobileMax),
+  "pan": zod.string().max(saveAgentAgreementDetailsResponsePanMax),
+  "bank": zod.string().max(saveAgentAgreementDetailsResponseBankMax),
+  "commission": zod.string().max(saveAgentAgreementDetailsResponseCommissionMax)
+})
+
+
+export const ListAgentPropertyRoomsParams = zod.object({
+  "id": zod.coerce.number().int()
+})
+
+export const listAgentPropertyRoomsResponseSubcategoriesItemMax = 80;
+
+export const listAgentPropertyRoomsResponseSubcategoriesMax = 50;
+
+export const listAgentPropertyRoomsResponseImagesMax = 12;
+
+
+
+export const ListAgentPropertyRoomsResponseItem = zod.object({
+  "subcategories": zod.array(zod.string().min(1).max(listAgentPropertyRoomsResponseSubcategoriesItemMax)).max(listAgentPropertyRoomsResponseSubcategoriesMax).optional(),
+  "isAvailable": zod.boolean().optional(),
+  "id": zod.int(),
+  "propertyId": zod.int(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "imageUrl": zod.string(),
+  "images": zod.array(zod.string()).max(listAgentPropertyRoomsResponseImagesMax),
+  "maxGuests": zod.int(),
+  "totalRooms": zod.int(),
+  "pricePerNight": zod.number(),
+  "amenities": zod.array(zod.string())
+})
+export const ListAgentPropertyRoomsResponse = zod.array(ListAgentPropertyRoomsResponseItem)
+
+
+export const createAgentRoomBodySubcategoriesItemMax = 80;
+
+export const createAgentRoomBodySubcategoriesMax = 50;
+
+
+
+
+export const createAgentRoomBodyImagesMax = 12;
+
+
+
+
+
+export const CreateAgentRoomBody = zod.object({
+  "subcategories": zod.array(zod.string().min(1).max(createAgentRoomBodySubcategoriesItemMax)).max(createAgentRoomBodySubcategoriesMax).optional(),
+  "propertyId": zod.int(),
+  "name": zod.string().min(1),
+  "description": zod.string().min(1),
+  "imageUrl": zod.string().min(1),
+  "images": zod.array(zod.string()).max(createAgentRoomBodyImagesMax).optional(),
+  "maxGuests": zod.int().min(1),
+  "totalRooms": zod.int().min(1),
+  "pricePerNight": zod.number(),
+  "isAvailable": zod.boolean().optional(),
+  "amenities": zod.array(zod.string()).optional()
+})
+
+export const createAgentRoomResponseSubcategoriesItemMax = 80;
+
+export const createAgentRoomResponseSubcategoriesMax = 50;
+
+export const createAgentRoomResponseImagesMax = 12;
+
+
+
+export const CreateAgentRoomResponse = zod.object({
+  "subcategories": zod.array(zod.string().min(1).max(createAgentRoomResponseSubcategoriesItemMax)).max(createAgentRoomResponseSubcategoriesMax).optional(),
+  "isAvailable": zod.boolean().optional(),
+  "id": zod.int(),
+  "propertyId": zod.int(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "imageUrl": zod.string(),
+  "images": zod.array(zod.string()).max(createAgentRoomResponseImagesMax),
+  "maxGuests": zod.int(),
+  "totalRooms": zod.int(),
+  "pricePerNight": zod.number(),
+  "amenities": zod.array(zod.string())
+})
+
+
+export const UpdateAgentRoomParams = zod.object({
+  "id": zod.coerce.number().int()
+})
+
+export const updateAgentRoomBodySubcategoriesItemMax = 80;
+
+export const updateAgentRoomBodySubcategoriesMax = 50;
+
+
+
+
+export const updateAgentRoomBodyImagesMax = 12;
+
+
+
+
+
+export const UpdateAgentRoomBody = zod.object({
+  "subcategories": zod.array(zod.string().min(1).max(updateAgentRoomBodySubcategoriesItemMax)).max(updateAgentRoomBodySubcategoriesMax).optional(),
+  "propertyId": zod.int(),
+  "name": zod.string().min(1),
+  "description": zod.string().min(1),
+  "imageUrl": zod.string().min(1),
+  "images": zod.array(zod.string()).max(updateAgentRoomBodyImagesMax).optional(),
+  "maxGuests": zod.int().min(1),
+  "totalRooms": zod.int().min(1),
+  "pricePerNight": zod.number(),
+  "isAvailable": zod.boolean().optional(),
+  "amenities": zod.array(zod.string()).optional()
+})
+
+export const updateAgentRoomResponseSubcategoriesItemMax = 80;
+
+export const updateAgentRoomResponseSubcategoriesMax = 50;
+
+export const updateAgentRoomResponseImagesMax = 12;
+
+
+
+export const UpdateAgentRoomResponse = zod.object({
+  "subcategories": zod.array(zod.string().min(1).max(updateAgentRoomResponseSubcategoriesItemMax)).max(updateAgentRoomResponseSubcategoriesMax).optional(),
+  "isAvailable": zod.boolean().optional(),
+  "id": zod.int(),
+  "propertyId": zod.int(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "imageUrl": zod.string(),
+  "images": zod.array(zod.string()).max(updateAgentRoomResponseImagesMax),
+  "maxGuests": zod.int(),
+  "totalRooms": zod.int(),
+  "pricePerNight": zod.number(),
+  "amenities": zod.array(zod.string())
+})
+
+
 export const GetPartnerAlertsConfigResponse = zod.object({
   "publicKey": zod.string()
 })
@@ -658,6 +987,9 @@ export const ListAdminBookingsQueryParams = zod.object({
 })
 
 export const ListAdminBookingsResponseItem = zod.object({
+  "gstRateBps": zod.int().optional(),
+  "gstMode": zod.string().optional(),
+  "gstTaxMinor": zod.int().optional(),
   "id": zod.int(),
   "bookingRef": zod.string().nullable(),
   "propertyId": zod.int(),
@@ -746,6 +1078,9 @@ export const UpdateBookingStatusBody = zod.object({
 })
 
 export const UpdateBookingStatusResponse = zod.object({
+  "gstRateBps": zod.int().optional(),
+  "gstMode": zod.string().optional(),
+  "gstTaxMinor": zod.int().optional(),
   "id": zod.int(),
   "bookingRef": zod.string().nullable(),
   "propertyId": zod.int(),
@@ -829,6 +1164,9 @@ export const GetAdminBookingParams = zod.object({
 })
 
 export const GetAdminBookingResponse = zod.object({
+  "gstRateBps": zod.int().optional(),
+  "gstMode": zod.string().optional(),
+  "gstTaxMinor": zod.int().optional(),
   "id": zod.int(),
   "bookingRef": zod.string().nullable(),
   "propertyId": zod.int(),
@@ -1013,6 +1351,9 @@ export const CreateAdminBookingRefundResponse = zod.object({
 /**
  * @summary Get company billing settings
  */
+export const getBillingSettingsResponseOneGstRateBpsMin = 0;
+export const getBillingSettingsResponseOneGstRateBpsMax = 10000;
+
 export const getBillingSettingsResponseOneBusinessNameMax = 200;
 
 export const getBillingSettingsResponseOneAddressMax = 1000;
@@ -1030,6 +1371,8 @@ export const getBillingSettingsResponseOneLogoUrlRegExp = new RegExp('^/api/stor
 
 
 export const GetBillingSettingsResponse = zod.object({
+  "gstRateBps": zod.int().min(getBillingSettingsResponseOneGstRateBpsMin).max(getBillingSettingsResponseOneGstRateBpsMax).optional(),
+  "gstMode": zod.enum(['inclusive', 'exclusive']).optional(),
   "businessName": zod.string().min(1).max(getBillingSettingsResponseOneBusinessNameMax),
   "address": zod.string().min(1).max(getBillingSettingsResponseOneAddressMax),
   "taxRegistration": zod.string().max(getBillingSettingsResponseOneTaxRegistrationMax).nullable(),
@@ -1045,6 +1388,9 @@ export const GetBillingSettingsResponse = zod.object({
 /**
  * @summary Set company billing settings used on future invoice PDFs
  */
+export const updateBillingSettingsBodyGstRateBpsMin = 0;
+export const updateBillingSettingsBodyGstRateBpsMax = 10000;
+
 export const updateBillingSettingsBodyBusinessNameMax = 200;
 
 export const updateBillingSettingsBodyAddressMax = 1000;
@@ -1062,6 +1408,8 @@ export const updateBillingSettingsBodyLogoUrlRegExp = new RegExp('^/api/storage/
 
 
 export const UpdateBillingSettingsBody = zod.object({
+  "gstRateBps": zod.int().min(updateBillingSettingsBodyGstRateBpsMin).max(updateBillingSettingsBodyGstRateBpsMax).optional(),
+  "gstMode": zod.enum(['inclusive', 'exclusive']).optional(),
   "businessName": zod.string().min(1).max(updateBillingSettingsBodyBusinessNameMax),
   "address": zod.string().min(1).max(updateBillingSettingsBodyAddressMax),
   "taxRegistration": zod.string().max(updateBillingSettingsBodyTaxRegistrationMax).nullish(),
@@ -1069,6 +1417,9 @@ export const UpdateBillingSettingsBody = zod.object({
   "phone": zod.string().max(updateBillingSettingsBodyPhoneMax).nullish(),
   "logoUrl": zod.string().max(updateBillingSettingsBodyLogoUrlMax).regex(updateBillingSettingsBodyLogoUrlRegExp).nullish()
 })
+
+export const updateBillingSettingsResponseOneGstRateBpsMin = 0;
+export const updateBillingSettingsResponseOneGstRateBpsMax = 10000;
 
 export const updateBillingSettingsResponseOneBusinessNameMax = 200;
 
@@ -1087,6 +1438,8 @@ export const updateBillingSettingsResponseOneLogoUrlRegExp = new RegExp('^/api/s
 
 
 export const UpdateBillingSettingsResponse = zod.object({
+  "gstRateBps": zod.int().min(updateBillingSettingsResponseOneGstRateBpsMin).max(updateBillingSettingsResponseOneGstRateBpsMax).optional(),
+  "gstMode": zod.enum(['inclusive', 'exclusive']).optional(),
   "businessName": zod.string().min(1).max(updateBillingSettingsResponseOneBusinessNameMax),
   "address": zod.string().min(1).max(updateBillingSettingsResponseOneAddressMax),
   "taxRegistration": zod.string().max(updateBillingSettingsResponseOneTaxRegistrationMax).nullable(),
@@ -1213,6 +1566,7 @@ export const createAdminInvoiceBodyLineItemsMax = 20;
 
 
 export const CreateAdminInvoiceBody = zod.object({
+  "gstMode": zod.enum(['inclusive', 'exclusive']).optional(),
   "bookingId": zod.int().nullish(),
   "customerName": zod.string().min(1).max(createAdminInvoiceBodyCustomerNameMax),
   "customerEmail": zod.email().min(createAdminInvoiceBodyCustomerEmailMin).max(createAdminInvoiceBodyCustomerEmailMax),
@@ -1514,8 +1868,8 @@ export const GetInvoiceEmailStatusParams = zod.object({
 })
 
 export const GetInvoiceEmailStatusResponse = zod.object({
-  "status": zod.enum(['unavailable']),
-  "configured": zod.literal(false),
+  "status": zod.enum(['unavailable', 'pending', 'sent', 'failed', 'skipped', 'not_queued']),
+  "configured": zod.boolean(),
   "message": zod.string()
 })
 
@@ -1636,7 +1990,14 @@ export const ListPostalDirectoryDistrictsResponse = zod.array(ListPostalDirector
 /**
  * @summary Active property categories
  */
+export const listPropertyCategoriesResponseSubcategoriesItemMax = 80;
+
+export const listPropertyCategoriesResponseSubcategoriesMax = 50;
+
+
+
 export const ListPropertyCategoriesResponseItem = zod.object({
+  "subcategories": zod.array(zod.string().min(1).max(listPropertyCategoriesResponseSubcategoriesItemMax)).max(listPropertyCategoriesResponseSubcategoriesMax).optional(),
   "id": zod.int(),
   "name": zod.string(),
   "slug": zod.string(),
@@ -1651,7 +2012,14 @@ export const ListPropertyCategoriesResponse = zod.array(ListPropertyCategoriesRe
 /**
  * @summary All property categories
  */
+export const listAdminPropertyCategoriesResponseSubcategoriesItemMax = 80;
+
+export const listAdminPropertyCategoriesResponseSubcategoriesMax = 50;
+
+
+
 export const ListAdminPropertyCategoriesResponseItem = zod.object({
+  "subcategories": zod.array(zod.string().min(1).max(listAdminPropertyCategoriesResponseSubcategoriesItemMax)).max(listAdminPropertyCategoriesResponseSubcategoriesMax).optional(),
   "id": zod.int(),
   "name": zod.string(),
   "slug": zod.string(),
@@ -1666,6 +2034,10 @@ export const ListAdminPropertyCategoriesResponse = zod.array(ListAdminPropertyCa
 /**
  * @summary Create a property category
  */
+export const createPropertyCategoryBodySubcategoriesItemMax = 80;
+
+export const createPropertyCategoryBodySubcategoriesMax = 50;
+
 
 
 
@@ -1673,13 +2045,21 @@ export const createPropertyCategoryBodySlugRegExp = new RegExp('^[a-z0-9]+(?:-[a
 
 
 export const CreatePropertyCategoryBody = zod.object({
+  "subcategories": zod.array(zod.string().min(1).max(createPropertyCategoryBodySubcategoriesItemMax)).max(createPropertyCategoryBodySubcategoriesMax).optional(),
   "name": zod.string().min(1),
   "slug": zod.string().min(1).regex(createPropertyCategoryBodySlugRegExp),
   "active": zod.boolean(),
   "sortOrder": zod.int()
 })
 
+export const createPropertyCategoryResponseSubcategoriesItemMax = 80;
+
+export const createPropertyCategoryResponseSubcategoriesMax = 50;
+
+
+
 export const CreatePropertyCategoryResponse = zod.object({
+  "subcategories": zod.array(zod.string().min(1).max(createPropertyCategoryResponseSubcategoriesItemMax)).max(createPropertyCategoryResponseSubcategoriesMax).optional(),
   "id": zod.int(),
   "name": zod.string(),
   "slug": zod.string(),
@@ -1697,6 +2077,10 @@ export const UpdatePropertyCategoryParams = zod.object({
   "id": zod.coerce.number().int()
 })
 
+export const updatePropertyCategoryBodySubcategoriesItemMax = 80;
+
+export const updatePropertyCategoryBodySubcategoriesMax = 50;
+
 
 
 
@@ -1704,13 +2088,21 @@ export const updatePropertyCategoryBodySlugRegExp = new RegExp('^[a-z0-9]+(?:-[a
 
 
 export const UpdatePropertyCategoryBody = zod.object({
+  "subcategories": zod.array(zod.string().min(1).max(updatePropertyCategoryBodySubcategoriesItemMax)).max(updatePropertyCategoryBodySubcategoriesMax).optional(),
   "name": zod.string().min(1),
   "slug": zod.string().min(1).regex(updatePropertyCategoryBodySlugRegExp),
   "active": zod.boolean(),
   "sortOrder": zod.int()
 })
 
+export const updatePropertyCategoryResponseSubcategoriesItemMax = 80;
+
+export const updatePropertyCategoryResponseSubcategoriesMax = 50;
+
+
+
 export const UpdatePropertyCategoryResponse = zod.object({
+  "subcategories": zod.array(zod.string().min(1).max(updatePropertyCategoryResponseSubcategoriesItemMax)).max(updatePropertyCategoryResponseSubcategoriesMax).optional(),
   "id": zod.int(),
   "name": zod.string(),
   "slug": zod.string(),
@@ -2199,12 +2591,17 @@ export const DeleteDestinationResponse = zod.object({
 /**
  * @summary All properties including pending/suspended (admin only)
  */
+export const listAdminPropertiesResponseSubcategoriesItemMax = 80;
+
+export const listAdminPropertiesResponseSubcategoriesMax = 50;
+
 
 export const listAdminPropertiesResponseImagesMax = 12;
 
 
 
 export const ListAdminPropertiesResponseItem = zod.object({
+  "subcategories": zod.array(zod.string().min(1).max(listAdminPropertiesResponseSubcategoriesItemMax)).max(listAdminPropertiesResponseSubcategoriesMax).optional(),
   "status": zod.string().optional().describe('pending | approved | active | suspended | rejected'),
   "id": zod.int(),
   "propertyNumber": zod.int().min(1).describe('Immutable server-assigned PM reference number; format as PM- followed by at least four digits'),
@@ -2236,6 +2633,10 @@ export const ListAdminPropertiesResponse = zod.array(ListAdminPropertiesResponse
 /**
  * @summary Create a property
  */
+export const createPropertyBodySubcategoriesItemMax = 80;
+
+export const createPropertyBodySubcategoriesMax = 50;
+
 
 
 
@@ -2248,6 +2649,7 @@ export const ListAdminPropertiesResponse = zod.array(ListAdminPropertiesResponse
 
 
 export const CreatePropertyBody = zod.object({
+  "subcategories": zod.array(zod.string().min(1).max(createPropertyBodySubcategoriesItemMax)).max(createPropertyBodySubcategoriesMax).optional(),
   "ownerId": zod.string().nullish(),
   "name": zod.string().min(1),
   "category": zod.string().describe('Managed or legacy property category slug'),
@@ -2277,14 +2679,23 @@ export const CreatePropertyBody = zod.object({
   "youtubeUrl": zod.string().nullish()
 })
 
+export const createPropertyResponseOneSubcategoriesItemMax = 80;
+
+export const createPropertyResponseOneSubcategoriesMax = 50;
+
 
 export const createPropertyResponseOneImagesMax = 12;
+
+export const createPropertyResponseTwoRoomsItemSubcategoriesItemMax = 80;
+
+export const createPropertyResponseTwoRoomsItemSubcategoriesMax = 50;
 
 export const createPropertyResponseTwoRoomsItemImagesMax = 12;
 
 
 
 export const CreatePropertyResponse = zod.object({
+  "subcategories": zod.array(zod.string().min(1).max(createPropertyResponseOneSubcategoriesItemMax)).max(createPropertyResponseOneSubcategoriesMax).optional(),
   "status": zod.string().optional().describe('pending | approved | active | suspended | rejected'),
   "id": zod.int(),
   "propertyNumber": zod.int().min(1).describe('Immutable server-assigned PM reference number; format as PM- followed by at least four digits'),
@@ -2321,6 +2732,7 @@ export const CreatePropertyResponse = zod.object({
   "contactEmail": zod.string().nullish(),
   "youtubeUrl": zod.string().nullish(),
   "rooms": zod.array(zod.object({
+  "subcategories": zod.array(zod.string().min(1).max(createPropertyResponseTwoRoomsItemSubcategoriesItemMax)).max(createPropertyResponseTwoRoomsItemSubcategoriesMax).optional(),
   "isAvailable": zod.boolean().optional(),
   "id": zod.int(),
   "propertyId": zod.int(),
@@ -2343,6 +2755,10 @@ export const UpdatePropertyParams = zod.object({
   "id": zod.coerce.number().int()
 })
 
+export const updatePropertyBodySubcategoriesItemMax = 80;
+
+export const updatePropertyBodySubcategoriesMax = 50;
+
 
 
 
@@ -2355,6 +2771,7 @@ export const UpdatePropertyParams = zod.object({
 
 
 export const UpdatePropertyBody = zod.object({
+  "subcategories": zod.array(zod.string().min(1).max(updatePropertyBodySubcategoriesItemMax)).max(updatePropertyBodySubcategoriesMax).optional(),
   "ownerId": zod.string().nullish(),
   "name": zod.string().min(1),
   "category": zod.string().describe('Managed or legacy property category slug'),
@@ -2384,14 +2801,23 @@ export const UpdatePropertyBody = zod.object({
   "youtubeUrl": zod.string().nullish()
 })
 
+export const updatePropertyResponseOneSubcategoriesItemMax = 80;
+
+export const updatePropertyResponseOneSubcategoriesMax = 50;
+
 
 export const updatePropertyResponseOneImagesMax = 12;
+
+export const updatePropertyResponseTwoRoomsItemSubcategoriesItemMax = 80;
+
+export const updatePropertyResponseTwoRoomsItemSubcategoriesMax = 50;
 
 export const updatePropertyResponseTwoRoomsItemImagesMax = 12;
 
 
 
 export const UpdatePropertyResponse = zod.object({
+  "subcategories": zod.array(zod.string().min(1).max(updatePropertyResponseOneSubcategoriesItemMax)).max(updatePropertyResponseOneSubcategoriesMax).optional(),
   "status": zod.string().optional().describe('pending | approved | active | suspended | rejected'),
   "id": zod.int(),
   "propertyNumber": zod.int().min(1).describe('Immutable server-assigned PM reference number; format as PM- followed by at least four digits'),
@@ -2428,6 +2854,7 @@ export const UpdatePropertyResponse = zod.object({
   "contactEmail": zod.string().nullish(),
   "youtubeUrl": zod.string().nullish(),
   "rooms": zod.array(zod.object({
+  "subcategories": zod.array(zod.string().min(1).max(updatePropertyResponseTwoRoomsItemSubcategoriesItemMax)).max(updatePropertyResponseTwoRoomsItemSubcategoriesMax).optional(),
   "isAvailable": zod.boolean().optional(),
   "id": zod.int(),
   "propertyId": zod.int(),
@@ -2458,6 +2885,10 @@ export const DeletePropertyResponse = zod.object({
 /**
  * @summary Create a room type
  */
+export const createRoomBodySubcategoriesItemMax = 80;
+
+export const createRoomBodySubcategoriesMax = 50;
+
 
 
 
@@ -2468,6 +2899,7 @@ export const createRoomBodyImagesMax = 12;
 
 
 export const CreateRoomBody = zod.object({
+  "subcategories": zod.array(zod.string().min(1).max(createRoomBodySubcategoriesItemMax)).max(createRoomBodySubcategoriesMax).optional(),
   "propertyId": zod.int(),
   "name": zod.string().min(1),
   "description": zod.string().min(1),
@@ -2480,11 +2912,16 @@ export const CreateRoomBody = zod.object({
   "amenities": zod.array(zod.string()).optional()
 })
 
+export const createRoomResponseSubcategoriesItemMax = 80;
+
+export const createRoomResponseSubcategoriesMax = 50;
+
 export const createRoomResponseImagesMax = 12;
 
 
 
 export const CreateRoomResponse = zod.object({
+  "subcategories": zod.array(zod.string().min(1).max(createRoomResponseSubcategoriesItemMax)).max(createRoomResponseSubcategoriesMax).optional(),
   "isAvailable": zod.boolean().optional(),
   "id": zod.int(),
   "propertyId": zod.int(),
@@ -2506,6 +2943,10 @@ export const UpdateRoomParams = zod.object({
   "id": zod.coerce.number().int()
 })
 
+export const updateRoomBodySubcategoriesItemMax = 80;
+
+export const updateRoomBodySubcategoriesMax = 50;
+
 
 
 
@@ -2516,6 +2957,7 @@ export const updateRoomBodyImagesMax = 12;
 
 
 export const UpdateRoomBody = zod.object({
+  "subcategories": zod.array(zod.string().min(1).max(updateRoomBodySubcategoriesItemMax)).max(updateRoomBodySubcategoriesMax).optional(),
   "propertyId": zod.int(),
   "name": zod.string().min(1),
   "description": zod.string().min(1),
@@ -2528,11 +2970,16 @@ export const UpdateRoomBody = zod.object({
   "amenities": zod.array(zod.string()).optional()
 })
 
+export const updateRoomResponseSubcategoriesItemMax = 80;
+
+export const updateRoomResponseSubcategoriesMax = 50;
+
 export const updateRoomResponseImagesMax = 12;
 
 
 
 export const UpdateRoomResponse = zod.object({
+  "subcategories": zod.array(zod.string().min(1).max(updateRoomResponseSubcategoriesItemMax)).max(updateRoomResponseSubcategoriesMax).optional(),
   "isAvailable": zod.boolean().optional(),
   "id": zod.int(),
   "propertyId": zod.int(),
@@ -2995,6 +3442,10 @@ export const GetTravelAssistantRecommendationsBody = zod.object({
 })).max(getTravelAssistantRecommendationsBodyHistoryMax).optional()
 })
 
+export const getTravelAssistantRecommendationsResponseRecommendationsItemSubcategoriesItemMax = 80;
+
+export const getTravelAssistantRecommendationsResponseRecommendationsItemSubcategoriesMax = 50;
+
 
 export const getTravelAssistantRecommendationsResponseRecommendationsItemImagesMax = 12;
 
@@ -3009,6 +3460,7 @@ export const GetTravelAssistantRecommendationsResponse = zod.object({
   "needsFollowUp": zod.boolean(),
   "followUpQuestion": zod.string().nullable(),
   "recommendations": zod.array(zod.object({
+  "subcategories": zod.array(zod.string().min(1).max(getTravelAssistantRecommendationsResponseRecommendationsItemSubcategoriesItemMax)).max(getTravelAssistantRecommendationsResponseRecommendationsItemSubcategoriesMax).optional(),
   "status": zod.string().optional().describe('pending | approved | active | suspended | rejected'),
   "id": zod.int(),
   "propertyNumber": zod.int().min(1).describe('Immutable server-assigned PM reference number; format as PM- followed by at least four digits'),
@@ -3051,12 +3503,17 @@ export const GetAgentStatsResponse = zod.object({
 /**
  * @summary Active properties available for agent bookings
  */
+export const listAgentPropertiesResponseSubcategoriesItemMax = 80;
+
+export const listAgentPropertiesResponseSubcategoriesMax = 50;
+
 
 export const listAgentPropertiesResponseImagesMax = 12;
 
 
 
 export const ListAgentPropertiesResponseItem = zod.object({
+  "subcategories": zod.array(zod.string().min(1).max(listAgentPropertiesResponseSubcategoriesItemMax)).max(listAgentPropertiesResponseSubcategoriesMax).optional(),
   "status": zod.string().optional().describe('pending | approved | active | suspended | rejected'),
   "id": zod.int(),
   "propertyNumber": zod.int().min(1).describe('Immutable server-assigned PM reference number; format as PM- followed by at least four digits'),
@@ -3085,12 +3542,17 @@ export const ListAgentPropertiesResponseItem = zod.object({
 export const ListAgentPropertiesResponse = zod.array(ListAgentPropertiesResponseItem)
 
 
+export const listAgentSubmittedPropertiesResponseSubcategoriesItemMax = 80;
+
+export const listAgentSubmittedPropertiesResponseSubcategoriesMax = 50;
+
 
 export const listAgentSubmittedPropertiesResponseImagesMax = 12;
 
 
 
 export const ListAgentSubmittedPropertiesResponseItem = zod.object({
+  "subcategories": zod.array(zod.string().min(1).max(listAgentSubmittedPropertiesResponseSubcategoriesItemMax)).max(listAgentSubmittedPropertiesResponseSubcategoriesMax).optional(),
   "status": zod.string().optional().describe('pending | approved | active | suspended | rejected'),
   "id": zod.int(),
   "propertyNumber": zod.int().min(1).describe('Immutable server-assigned PM reference number; format as PM- followed by at least four digits'),
@@ -3119,6 +3581,10 @@ export const ListAgentSubmittedPropertiesResponseItem = zod.object({
 export const ListAgentSubmittedPropertiesResponse = zod.array(ListAgentSubmittedPropertiesResponseItem)
 
 
+export const submitAgentPropertyBodySubcategoriesItemMax = 80;
+
+export const submitAgentPropertyBodySubcategoriesMax = 50;
+
 
 
 
@@ -3132,6 +3598,7 @@ export const submitAgentPropertyBodyStartingPriceMin = 0;
 
 
 export const SubmitAgentPropertyBody = zod.object({
+  "subcategories": zod.array(zod.string().min(1).max(submitAgentPropertyBodySubcategoriesItemMax)).max(submitAgentPropertyBodySubcategoriesMax).optional(),
   "name": zod.string().min(1),
   "category": zod.string(),
   "country": zod.string().min(1),
@@ -3159,12 +3626,17 @@ export const SubmitAgentPropertyBody = zod.object({
   "longitude": zod.number().nullish()
 })
 
+export const submitAgentPropertyResponseSubcategoriesItemMax = 80;
+
+export const submitAgentPropertyResponseSubcategoriesMax = 50;
+
 
 export const submitAgentPropertyResponseImagesMax = 12;
 
 
 
 export const SubmitAgentPropertyResponse = zod.object({
+  "subcategories": zod.array(zod.string().min(1).max(submitAgentPropertyResponseSubcategoriesItemMax)).max(submitAgentPropertyResponseSubcategoriesMax).optional(),
   "status": zod.string().optional().describe('pending | approved | active | suspended | rejected'),
   "id": zod.int(),
   "propertyNumber": zod.int().min(1).describe('Immutable server-assigned PM reference number; format as PM- followed by at least four digits'),
@@ -3193,6 +3665,9 @@ export const SubmitAgentPropertyResponse = zod.object({
 
 
 export const ListAgentBookingsResponseItem = zod.object({
+  "gstRateBps": zod.int().optional(),
+  "gstMode": zod.string().optional(),
+  "gstTaxMinor": zod.int().optional(),
   "id": zod.int(),
   "bookingRef": zod.string().nullable(),
   "propertyId": zod.int(),
@@ -3409,6 +3884,10 @@ export const GetAdminAgentParams = zod.object({
   "id": zod.coerce.string()
 })
 
+export const getAdminAgentResponsePropertiesItemSubcategoriesItemMax = 80;
+
+export const getAdminAgentResponsePropertiesItemSubcategoriesMax = 50;
+
 
 export const getAdminAgentResponsePropertiesItemImagesMax = 12;
 
@@ -3451,6 +3930,7 @@ export const GetAdminAgentResponse = zod.object({
   "createdAt": zod.string()
 })),
   "properties": zod.array(zod.object({
+  "subcategories": zod.array(zod.string().min(1).max(getAdminAgentResponsePropertiesItemSubcategoriesItemMax)).max(getAdminAgentResponsePropertiesItemSubcategoriesMax).optional(),
   "status": zod.string().optional().describe('pending | approved | active | suspended | rejected'),
   "id": zod.int(),
   "propertyNumber": zod.int().min(1).describe('Immutable server-assigned PM reference number; format as PM- followed by at least four digits'),
@@ -3745,12 +4225,17 @@ export const ReviewAdminAgentPropertyBody = zod.object({
   "reason": zod.string().max(reviewAdminAgentPropertyBodyReasonMax).nullish()
 })
 
+export const reviewAdminAgentPropertyResponseSubcategoriesItemMax = 80;
+
+export const reviewAdminAgentPropertyResponseSubcategoriesMax = 50;
+
 
 export const reviewAdminAgentPropertyResponseImagesMax = 12;
 
 
 
 export const ReviewAdminAgentPropertyResponse = zod.object({
+  "subcategories": zod.array(zod.string().min(1).max(reviewAdminAgentPropertyResponseSubcategoriesItemMax)).max(reviewAdminAgentPropertyResponseSubcategoriesMax).optional(),
   "status": zod.string().optional().describe('pending | approved | active | suspended | rejected'),
   "id": zod.int(),
   "propertyNumber": zod.int().min(1).describe('Immutable server-assigned PM reference number; format as PM- followed by at least four digits'),
@@ -4621,17 +5106,37 @@ export const HealthCheckResponse = zod.object({
 /**
  * @summary Homepage data (featured, popular, top rated, cities, offers)
  */
+export const getHomeDataResponseFeaturedItemSubcategoriesItemMax = 80;
+
+export const getHomeDataResponseFeaturedItemSubcategoriesMax = 50;
+
 
 export const getHomeDataResponseFeaturedItemImagesMax = 12;
+
+export const getHomeDataResponseFeaturedByCityItemPropertiesItemSubcategoriesItemMax = 80;
+
+export const getHomeDataResponseFeaturedByCityItemPropertiesItemSubcategoriesMax = 50;
 
 
 export const getHomeDataResponseFeaturedByCityItemPropertiesItemImagesMax = 12;
 
+export const getHomeDataResponsePopularItemSubcategoriesItemMax = 80;
+
+export const getHomeDataResponsePopularItemSubcategoriesMax = 50;
+
 
 export const getHomeDataResponsePopularItemImagesMax = 12;
 
+export const getHomeDataResponseTopRatedItemSubcategoriesItemMax = 80;
+
+export const getHomeDataResponseTopRatedItemSubcategoriesMax = 50;
+
 
 export const getHomeDataResponseTopRatedItemImagesMax = 12;
+
+export const getHomeDataResponseRecommendedItemSubcategoriesItemMax = 80;
+
+export const getHomeDataResponseRecommendedItemSubcategoriesMax = 50;
 
 
 export const getHomeDataResponseRecommendedItemImagesMax = 12;
@@ -4640,6 +5145,7 @@ export const getHomeDataResponseRecommendedItemImagesMax = 12;
 
 export const GetHomeDataResponse = zod.object({
   "featured": zod.array(zod.object({
+  "subcategories": zod.array(zod.string().min(1).max(getHomeDataResponseFeaturedItemSubcategoriesItemMax)).max(getHomeDataResponseFeaturedItemSubcategoriesMax).optional(),
   "status": zod.string().optional().describe('pending | approved | active | suspended | rejected'),
   "id": zod.int(),
   "propertyNumber": zod.int().min(1).describe('Immutable server-assigned PM reference number; format as PM- followed by at least four digits'),
@@ -4668,6 +5174,7 @@ export const GetHomeDataResponse = zod.object({
   "featuredByCity": zod.array(zod.object({
   "city": zod.string(),
   "properties": zod.array(zod.object({
+  "subcategories": zod.array(zod.string().min(1).max(getHomeDataResponseFeaturedByCityItemPropertiesItemSubcategoriesItemMax)).max(getHomeDataResponseFeaturedByCityItemPropertiesItemSubcategoriesMax).optional(),
   "status": zod.string().optional().describe('pending | approved | active | suspended | rejected'),
   "id": zod.int(),
   "propertyNumber": zod.int().min(1).describe('Immutable server-assigned PM reference number; format as PM- followed by at least four digits'),
@@ -4711,6 +5218,7 @@ export const GetHomeDataResponse = zod.object({
   "updatedAt": zod.string()
 })),
   "popular": zod.array(zod.object({
+  "subcategories": zod.array(zod.string().min(1).max(getHomeDataResponsePopularItemSubcategoriesItemMax)).max(getHomeDataResponsePopularItemSubcategoriesMax).optional(),
   "status": zod.string().optional().describe('pending | approved | active | suspended | rejected'),
   "id": zod.int(),
   "propertyNumber": zod.int().min(1).describe('Immutable server-assigned PM reference number; format as PM- followed by at least four digits'),
@@ -4737,6 +5245,7 @@ export const GetHomeDataResponse = zod.object({
   "distanceKm": zod.number().optional().describe('Distance from the customer\'s location when using nearby search')
 })),
   "topRated": zod.array(zod.object({
+  "subcategories": zod.array(zod.string().min(1).max(getHomeDataResponseTopRatedItemSubcategoriesItemMax)).max(getHomeDataResponseTopRatedItemSubcategoriesMax).optional(),
   "status": zod.string().optional().describe('pending | approved | active | suspended | rejected'),
   "id": zod.int(),
   "propertyNumber": zod.int().min(1).describe('Immutable server-assigned PM reference number; format as PM- followed by at least four digits'),
@@ -4775,6 +5284,7 @@ export const GetHomeDataResponse = zod.object({
   "discountPercent": zod.number().nullish()
 })),
   "recommended": zod.array(zod.object({
+  "subcategories": zod.array(zod.string().min(1).max(getHomeDataResponseRecommendedItemSubcategoriesItemMax)).max(getHomeDataResponseRecommendedItemSubcategoriesMax).optional(),
   "status": zod.string().optional().describe('pending | approved | active | suspended | rejected'),
   "id": zod.int(),
   "propertyNumber": zod.int().min(1).describe('Immutable server-assigned PM reference number; format as PM- followed by at least four digits'),
@@ -4823,6 +5333,7 @@ export const SearchPropertiesQueryParams = zod.object({
   "country": zod.coerce.string().optional(),
   "state": zod.coerce.string().optional(),
   "category": zod.coerce.string().optional().describe('Comma-separated categories (prime,luxury,budget,package)'),
+  "subcategory": zod.coerce.string().optional().describe('Match a property or available room with this subcategory.'),
   "minPrice": zod.coerce.number().optional(),
   "maxPrice": zod.coerce.number().optional(),
   "minRating": zod.coerce.number().optional(),
@@ -4835,12 +5346,17 @@ export const SearchPropertiesQueryParams = zod.object({
   "radiusKm": zod.coerce.number().min(1).max(searchPropertiesQueryRadiusKmMax).default(searchPropertiesQueryRadiusKmDefault).describe('Maximum nearby-search radius in kilometres')
 })
 
+export const searchPropertiesResponseSubcategoriesItemMax = 80;
+
+export const searchPropertiesResponseSubcategoriesMax = 50;
+
 
 export const searchPropertiesResponseImagesMax = 12;
 
 
 
 export const SearchPropertiesResponseItem = zod.object({
+  "subcategories": zod.array(zod.string().min(1).max(searchPropertiesResponseSubcategoriesItemMax)).max(searchPropertiesResponseSubcategoriesMax).optional(),
   "status": zod.string().optional().describe('pending | approved | active | suspended | rejected'),
   "id": zod.int(),
   "propertyNumber": zod.int().min(1).describe('Immutable server-assigned PM reference number; format as PM- followed by at least four digits'),
@@ -4876,14 +5392,23 @@ export const GetPropertyParams = zod.object({
   "id": zod.coerce.number().int()
 })
 
+export const getPropertyResponseOneSubcategoriesItemMax = 80;
+
+export const getPropertyResponseOneSubcategoriesMax = 50;
+
 
 export const getPropertyResponseOneImagesMax = 12;
+
+export const getPropertyResponseTwoRoomsItemSubcategoriesItemMax = 80;
+
+export const getPropertyResponseTwoRoomsItemSubcategoriesMax = 50;
 
 export const getPropertyResponseTwoRoomsItemImagesMax = 12;
 
 
 
 export const GetPropertyResponse = zod.object({
+  "subcategories": zod.array(zod.string().min(1).max(getPropertyResponseOneSubcategoriesItemMax)).max(getPropertyResponseOneSubcategoriesMax).optional(),
   "status": zod.string().optional().describe('pending | approved | active | suspended | rejected'),
   "id": zod.int(),
   "propertyNumber": zod.int().min(1).describe('Immutable server-assigned PM reference number; format as PM- followed by at least four digits'),
@@ -4920,6 +5445,7 @@ export const GetPropertyResponse = zod.object({
   "contactEmail": zod.string().nullish(),
   "youtubeUrl": zod.string().nullish(),
   "rooms": zod.array(zod.object({
+  "subcategories": zod.array(zod.string().min(1).max(getPropertyResponseTwoRoomsItemSubcategoriesItemMax)).max(getPropertyResponseTwoRoomsItemSubcategoriesMax).optional(),
   "isAvailable": zod.boolean().optional(),
   "id": zod.int(),
   "propertyId": zod.int(),
@@ -4954,12 +5480,20 @@ export const GetAvailabilityQueryParams = zod.object({
   "roomsCount": zod.coerce.number().int().min(1).optional()
 })
 
+export const getAvailabilityResponseRoomSubcategoriesItemMax = 80;
+
+export const getAvailabilityResponseRoomSubcategoriesMax = 50;
+
 export const getAvailabilityResponseRoomImagesMax = 12;
 
 
 
 export const GetAvailabilityResponseItem = zod.object({
+  "baseTotalPrice": zod.number().optional(),
+  "gstRateBps": zod.int().optional(),
+  "gstMode": zod.enum(['inclusive', 'exclusive']).optional(),
   "room": zod.object({
+  "subcategories": zod.array(zod.string().min(1).max(getAvailabilityResponseRoomSubcategoriesItemMax)).max(getAvailabilityResponseRoomSubcategoriesMax).optional(),
   "isAvailable": zod.boolean().optional(),
   "id": zod.int(),
   "propertyId": zod.int(),
@@ -5066,6 +5600,9 @@ export const CreateBookingBody = zod.object({
 })
 
 export const CreateBookingResponse = zod.object({
+  "gstRateBps": zod.int().optional(),
+  "gstMode": zod.string().optional(),
+  "gstTaxMinor": zod.int().optional(),
   "id": zod.int(),
   "bookingRef": zod.string().nullable(),
   "propertyId": zod.int(),
@@ -5149,6 +5686,9 @@ export const ListBookingsQueryParams = zod.object({
 })
 
 export const ListBookingsResponseItem = zod.object({
+  "gstRateBps": zod.int().optional(),
+  "gstMode": zod.string().optional(),
+  "gstTaxMinor": zod.int().optional(),
   "id": zod.int(),
   "bookingRef": zod.string().nullable(),
   "propertyId": zod.int(),
@@ -5238,6 +5778,9 @@ export const GetBookingByIdQueryParams = zod.object({
 })
 
 export const GetBookingByIdResponse = zod.object({
+  "gstRateBps": zod.int().optional(),
+  "gstMode": zod.string().optional(),
+  "gstTaxMinor": zod.int().optional(),
   "id": zod.int(),
   "bookingRef": zod.string().nullable(),
   "propertyId": zod.int(),
@@ -5313,6 +5856,18 @@ export const GetBookingByIdResponse = zod.object({
 })
 
 
+export const DownloadBookingInvoiceParams = zod.object({
+  "id": zod.coerce.number().int()
+})
+
+export const DownloadBookingInvoiceQueryParams = zod.object({
+  "email": zod.coerce.string().optional(),
+  "bookingRef": zod.coerce.string().optional()
+})
+
+export const DownloadBookingInvoiceResponse = zod.unknown()
+
+
 /**
  * @summary Cancel a booking
  */
@@ -5331,6 +5886,9 @@ export const CancelBookingBody = zod.object({
 })
 
 export const CancelBookingResponse = zod.object({
+  "gstRateBps": zod.int().optional(),
+  "gstMode": zod.string().optional(),
+  "gstTaxMinor": zod.int().optional(),
   "id": zod.int(),
   "bookingRef": zod.string().nullable(),
   "propertyId": zod.int(),
@@ -5655,12 +6213,17 @@ export const GetWishlistQueryParams = zod.object({
   "email": zod.coerce.string().optional()
 })
 
+export const getWishlistResponseSubcategoriesItemMax = 80;
+
+export const getWishlistResponseSubcategoriesMax = 50;
+
 
 export const getWishlistResponseImagesMax = 12;
 
 
 
 export const GetWishlistResponseItem = zod.object({
+  "subcategories": zod.array(zod.string().min(1).max(getWishlistResponseSubcategoriesItemMax)).max(getWishlistResponseSubcategoriesMax).optional(),
   "status": zod.string().optional().describe('pending | approved | active | suspended | rejected'),
   "id": zod.int(),
   "propertyNumber": zod.int().min(1).describe('Immutable server-assigned PM reference number; format as PM- followed by at least four digits'),
@@ -5808,12 +6371,17 @@ export const GetPartnerStatsResponse = zod.object({
 /**
  * @summary Properties owned by the signed-in partner
  */
+export const listPartnerPropertiesResponseSubcategoriesItemMax = 80;
+
+export const listPartnerPropertiesResponseSubcategoriesMax = 50;
+
 
 export const listPartnerPropertiesResponseImagesMax = 12;
 
 
 
 export const ListPartnerPropertiesResponseItem = zod.object({
+  "subcategories": zod.array(zod.string().min(1).max(listPartnerPropertiesResponseSubcategoriesItemMax)).max(listPartnerPropertiesResponseSubcategoriesMax).optional(),
   "status": zod.string().optional().describe('pending | approved | active | suspended | rejected'),
   "id": zod.int(),
   "propertyNumber": zod.int().min(1).describe('Immutable server-assigned PM reference number; format as PM- followed by at least four digits'),
@@ -5849,6 +6417,10 @@ export const UpdatePartnerPropertyParams = zod.object({
   "id": zod.coerce.number().int()
 })
 
+export const updatePartnerPropertyBodySubcategoriesItemMax = 80;
+
+export const updatePartnerPropertyBodySubcategoriesMax = 50;
+
 
 
 
@@ -5861,6 +6433,7 @@ export const UpdatePartnerPropertyParams = zod.object({
 
 
 export const UpdatePartnerPropertyBody = zod.object({
+  "subcategories": zod.array(zod.string().min(1).max(updatePartnerPropertyBodySubcategoriesItemMax)).max(updatePartnerPropertyBodySubcategoriesMax).optional(),
   "ownerId": zod.string().nullish(),
   "name": zod.string().min(1),
   "category": zod.string().describe('Managed or legacy property category slug'),
@@ -5890,14 +6463,23 @@ export const UpdatePartnerPropertyBody = zod.object({
   "youtubeUrl": zod.string().nullish()
 })
 
+export const updatePartnerPropertyResponseOneSubcategoriesItemMax = 80;
+
+export const updatePartnerPropertyResponseOneSubcategoriesMax = 50;
+
 
 export const updatePartnerPropertyResponseOneImagesMax = 12;
+
+export const updatePartnerPropertyResponseTwoRoomsItemSubcategoriesItemMax = 80;
+
+export const updatePartnerPropertyResponseTwoRoomsItemSubcategoriesMax = 50;
 
 export const updatePartnerPropertyResponseTwoRoomsItemImagesMax = 12;
 
 
 
 export const UpdatePartnerPropertyResponse = zod.object({
+  "subcategories": zod.array(zod.string().min(1).max(updatePartnerPropertyResponseOneSubcategoriesItemMax)).max(updatePartnerPropertyResponseOneSubcategoriesMax).optional(),
   "status": zod.string().optional().describe('pending | approved | active | suspended | rejected'),
   "id": zod.int(),
   "propertyNumber": zod.int().min(1).describe('Immutable server-assigned PM reference number; format as PM- followed by at least four digits'),
@@ -5934,6 +6516,7 @@ export const UpdatePartnerPropertyResponse = zod.object({
   "contactEmail": zod.string().nullish(),
   "youtubeUrl": zod.string().nullish(),
   "rooms": zod.array(zod.object({
+  "subcategories": zod.array(zod.string().min(1).max(updatePartnerPropertyResponseTwoRoomsItemSubcategoriesItemMax)).max(updatePartnerPropertyResponseTwoRoomsItemSubcategoriesMax).optional(),
   "isAvailable": zod.boolean().optional(),
   "id": zod.int(),
   "propertyId": zod.int(),
@@ -5957,6 +6540,9 @@ export const ListPartnerBookingsQueryParams = zod.object({
 })
 
 export const ListPartnerBookingsResponseItem = zod.object({
+  "gstRateBps": zod.int().optional(),
+  "gstMode": zod.string().optional(),
+  "gstTaxMinor": zod.int().optional(),
   "id": zod.int(),
   "bookingRef": zod.string().nullable(),
   "propertyId": zod.int(),
@@ -6036,6 +6622,10 @@ export const ListPartnerBookingsResponse = zod.array(ListPartnerBookingsResponse
 /**
  * @summary Add a room type to an owned property
  */
+export const createPartnerRoomBodySubcategoriesItemMax = 80;
+
+export const createPartnerRoomBodySubcategoriesMax = 50;
+
 
 
 
@@ -6046,6 +6636,7 @@ export const createPartnerRoomBodyImagesMax = 12;
 
 
 export const CreatePartnerRoomBody = zod.object({
+  "subcategories": zod.array(zod.string().min(1).max(createPartnerRoomBodySubcategoriesItemMax)).max(createPartnerRoomBodySubcategoriesMax).optional(),
   "propertyId": zod.int(),
   "name": zod.string().min(1),
   "description": zod.string().min(1),
@@ -6058,11 +6649,16 @@ export const CreatePartnerRoomBody = zod.object({
   "amenities": zod.array(zod.string()).optional()
 })
 
+export const createPartnerRoomResponseSubcategoriesItemMax = 80;
+
+export const createPartnerRoomResponseSubcategoriesMax = 50;
+
 export const createPartnerRoomResponseImagesMax = 12;
 
 
 
 export const CreatePartnerRoomResponse = zod.object({
+  "subcategories": zod.array(zod.string().min(1).max(createPartnerRoomResponseSubcategoriesItemMax)).max(createPartnerRoomResponseSubcategoriesMax).optional(),
   "isAvailable": zod.boolean().optional(),
   "id": zod.int(),
   "propertyId": zod.int(),
@@ -6084,6 +6680,10 @@ export const UpdatePartnerRoomParams = zod.object({
   "id": zod.coerce.number().int()
 })
 
+export const updatePartnerRoomBodySubcategoriesItemMax = 80;
+
+export const updatePartnerRoomBodySubcategoriesMax = 50;
+
 
 
 
@@ -6094,6 +6694,7 @@ export const updatePartnerRoomBodyImagesMax = 12;
 
 
 export const UpdatePartnerRoomBody = zod.object({
+  "subcategories": zod.array(zod.string().min(1).max(updatePartnerRoomBodySubcategoriesItemMax)).max(updatePartnerRoomBodySubcategoriesMax).optional(),
   "propertyId": zod.int(),
   "name": zod.string().min(1),
   "description": zod.string().min(1),
@@ -6106,11 +6707,16 @@ export const UpdatePartnerRoomBody = zod.object({
   "amenities": zod.array(zod.string()).optional()
 })
 
+export const updatePartnerRoomResponseSubcategoriesItemMax = 80;
+
+export const updatePartnerRoomResponseSubcategoriesMax = 50;
+
 export const updatePartnerRoomResponseImagesMax = 12;
 
 
 
 export const UpdatePartnerRoomResponse = zod.object({
+  "subcategories": zod.array(zod.string().min(1).max(updatePartnerRoomResponseSubcategoriesItemMax)).max(updatePartnerRoomResponseSubcategoriesMax).optional(),
   "isAvailable": zod.boolean().optional(),
   "id": zod.int(),
   "propertyId": zod.int(),
@@ -6145,6 +6751,9 @@ export const ListEmployeeBookingsQueryParams = zod.object({
 })
 
 export const ListEmployeeBookingsResponseItem = zod.object({
+  "gstRateBps": zod.int().optional(),
+  "gstMode": zod.string().optional(),
+  "gstTaxMinor": zod.int().optional(),
   "id": zod.int(),
   "bookingRef": zod.string().nullable(),
   "propertyId": zod.int(),
@@ -6233,6 +6842,9 @@ export const EmployeeUpdateBookingStatusBody = zod.object({
 })
 
 export const EmployeeUpdateBookingStatusResponse = zod.object({
+  "gstRateBps": zod.int().optional(),
+  "gstMode": zod.string().optional(),
+  "gstTaxMinor": zod.int().optional(),
   "id": zod.int(),
   "bookingRef": zod.string().nullable(),
   "propertyId": zod.int(),
@@ -6945,6 +7557,10 @@ export const ChangePartnerPasswordResponse = zod.object({
 /**
  * @summary Register a new property (goes to admin for approval)
  */
+export const registerPartnerPropertyBodySubcategoriesItemMax = 80;
+
+export const registerPartnerPropertyBodySubcategoriesMax = 50;
+
 
 
 
@@ -6956,6 +7572,7 @@ export const ChangePartnerPasswordResponse = zod.object({
 
 
 export const RegisterPartnerPropertyBody = zod.object({
+  "subcategories": zod.array(zod.string().min(1).max(registerPartnerPropertyBodySubcategoriesItemMax)).max(registerPartnerPropertyBodySubcategoriesMax).optional(),
   "name": zod.string().min(1),
   "category": zod.string().describe('Managed property category slug'),
   "country": zod.string().min(1),

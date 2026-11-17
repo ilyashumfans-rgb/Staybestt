@@ -1,3 +1,4 @@
+import { calculateGst } from "@workspace/api-zod";
 export const MAX_MINOR_UNITS = 2_147_483_647;
 
 export type InvoiceLineInput = {
@@ -31,7 +32,7 @@ function assertSafeMinorUnits(value: number, label: string): void {
  * Compute every money total from integer paise values. The API never accepts
  * client-supplied subtotal, tax, total, paid, or due amounts.
  */
-export function computeInvoiceTotals(lines: InvoiceLineInput[]): InvoiceTotals {
+export function computeInvoiceTotals(lines: InvoiceLineInput[], mode = "exclusive"): InvoiceTotals {
   if (lines.length === 0) {
     throw new Error("At least one invoice line item is required");
   }
@@ -57,15 +58,15 @@ export function computeInvoiceTotals(lines: InvoiceLineInput[]): InvoiceTotals {
       throw new Error("Line item tax rate must be between 0 and 10000 basis points");
     }
 
-    const subtotalMinor = line.quantity * line.unitPriceMinor;
+    const enteredMinor = line.quantity * line.unitPriceMinor;
+    const { subtotalMinor, taxMinor, totalMinor } = calculateGst(enteredMinor, taxRateBps, mode);
     assertSafeMinorUnits(subtotalMinor, "Line item subtotal");
-    const taxMinor = Math.round((subtotalMinor * taxRateBps) / 10_000);
     assertSafeMinorUnits(taxMinor, "Line item tax");
-    const totalMinor = subtotalMinor + taxMinor;
     assertSafeMinorUnits(totalMinor, "Line item total");
 
     return {
       ...line,
+      unitPriceMinor: mode === "inclusive" ? Math.round(subtotalMinor / line.quantity) : line.unitPriceMinor,
       description: line.description.trim(),
       taxRateBps,
       subtotalMinor,

@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { SubcategoryPicker } from "@/components/property/SubcategoryPicker";
+import { AgentPropertyRooms } from "@/components/agent/AgentPropertyRooms";
 import { LocationFields } from "@/components/LocationFields";
 import { AgentLayout } from "@/components/layout/AgentLayout";
 import { AgentAgreement } from "@/components/agent/AgentAgreement";
@@ -7,6 +9,7 @@ import {
   getListAgentSubmittedPropertiesQueryKey,
   useSubmitAgentProperty,
   useGetMe,
+  useListPropertyCategories,
   getGetMeQueryKey
 } from "@workspace/api-client-react";
 import { formatPrice } from "@/lib/utils";
@@ -36,10 +39,12 @@ export default function AgentProperties() {
   });
 
   const submitProp = useSubmitAgentProperty();
+  const { data: categories = [] } = useListPropertyCategories();
   const [registerOpen, setRegisterOpen] = useState(false);
+  const [roomsProperty, setRoomsProperty] = useState<{ id: number; name: string; category: string } | null>(null);
   
   const [regForm, setRegForm] = useState({
-    name: "", category: "prime", country: "", state: "", city: "", area: "", pincode: "",
+    name: "", category: "", subcategories: [] as string[], country: "", state: "", city: "", area: "", pincode: "",
     latitude: "", longitude: "",
     address: "", description: "", imageUrl: "", startingPrice: ""
   });
@@ -50,6 +55,7 @@ export default function AgentProperties() {
       data: {
         name: regForm.name.trim(),
         category: regForm.category,
+        subcategories: regForm.subcategories,
         country: regForm.country.trim(),
         state: regForm.state.trim(),
         city: regForm.city.trim(),
@@ -68,7 +74,7 @@ export default function AgentProperties() {
         toast.info("Download, sign and upload the hotel agreement in Agent Docs below.");
         setRegisterOpen(false);
         setRegForm({
-          name: "", category: "prime", country: "", state: "", city: "", area: "", pincode: "",
+          name: "", category: "", subcategories: [], country: "", state: "", city: "", area: "", pincode: "",
           latitude: "", longitude: "",
           address: "", description: "", imageUrl: "", startingPrice: ""
         });
@@ -80,6 +86,12 @@ export default function AgentProperties() {
 
   return (
     <AgentLayout title="Submitted Properties">
+      <Dialog open={!!roomsProperty} onOpenChange={open => { if (!open) setRoomsProperty(null); }}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Rooms — {roomsProperty?.name}</DialogTitle></DialogHeader>
+          {roomsProperty && <AgentPropertyRooms key={roomsProperty.id} propertyId={roomsProperty.id} category={roomsProperty.category} />}
+        </DialogContent>
+      </Dialog>
       {me?.role === "agent" && <AgentAgreement agentId={me.id} properties={(properties ?? []).map(property => ({
         id: property.id, name: property.name,
       }))} />}
@@ -106,18 +118,17 @@ export default function AgentProperties() {
               </div>
               <div>
                 <label className="text-sm font-bold text-secondary mb-1 block">Category *</label>
-                <select required value={regForm.category} onChange={e => setRegForm({...regForm, category: e.target.value})} className="w-full h-10 border border-input rounded-md px-3 bg-white" data-testid="select-agent-property-category">
-                  <option value="prime">Prime</option>
-                  <option value="luxury">Luxury</option>
-                  <option value="budget">Budget</option>
-                  <option value="package">Package</option>
+                <select required value={regForm.category} onChange={e => setRegForm({...regForm, category: e.target.value, subcategories: []})} className="w-full h-10 border border-input rounded-md px-3 bg-white" data-testid="select-agent-property-category">
+                  <option value="" disabled>Select category</option>
+                  {categories.map(category => <option key={category.id} value={category.slug}>{category.name}</option>)}
                 </select>
               </div>
               <div>
-                <label className="text-sm font-bold text-secondary mb-1 block">Starting price estimate (₹/night) *</label>
+                <label className="text-sm font-bold text-secondary mb-1 block">{regForm.category.replace(/[\s_-]/g, "").toLowerCase() === "dayout" ? "Day Out price per person (₹) *" : "Starting price estimate (₹/night) *"}</label>
                 <Input type="number" min="0" required value={regForm.startingPrice} onChange={e => setRegForm({...regForm, startingPrice: e.target.value})} data-testid="input-agent-property-price" />
               </div>
               
+              <SubcategoryPicker category={regForm.category} value={regForm.subcategories} onChange={subcategories => setRegForm(current => ({ ...current, subcategories }))} />
               <LocationFields
                 value={{ 
                   country: regForm.country, 
@@ -187,6 +198,7 @@ export default function AgentProperties() {
                     <img src={prop.imageUrl} alt={prop.name} className="w-12 h-12 rounded object-cover" />
                     <div>
                       <p className="font-bold text-secondary text-sm">{prop.name}</p>
+                      <Button variant="outline" size="sm" className="my-2" onClick={() => setRoomsProperty(prop)}>Manage rooms</Button>
                       <Badge variant="outline" className="text-[10px] py-0 px-1 capitalize mt-0.5">{prop.category}</Badge>
                     </div>
                   </td>

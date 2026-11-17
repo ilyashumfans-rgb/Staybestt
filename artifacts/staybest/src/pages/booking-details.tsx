@@ -2,7 +2,13 @@ import { useUser } from "@clerk/react";
 import {
   getGetBookingByIdQueryKey,
   useGetBookingById,
+  useCancelBooking,
+  getListBookingsQueryKey,
+  downloadBookingInvoice,
 } from "@workspace/api-client-react";
+import { useLayoutEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { AlertCircle, ArrowLeft, Loader2, MapPin } from "lucide-react";
 import { useLocation, useParams, useSearch } from "wouter";
 import { Layout } from "@/components/layout/Layout";
@@ -21,6 +27,12 @@ export default function BookingDetails() {
   const { email } = useGuestIdentity();
   const [, setLocation] = useLocation();
   const bookingRef = search.get("bookingRef") || undefined;
+  const queryClient = useQueryClient();
+  const cancelBooking = useCancelBooking();
+  const [downloading, setDownloading] = useState(false);
+  useLayoutEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  }, [bookingId]);
 
   const { data: booking, isLoading, error } = useGetBookingById(
     bookingId,
@@ -35,6 +47,25 @@ export default function BookingDetails() {
       },
     },
   );
+
+  const handleInvoice = async () => {
+    setDownloading(true);
+    try {
+      const blob = await downloadBookingInvoice(bookingId, isSignedIn ? undefined : { email, bookingRef });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `Invoice-${booking?.bookingRef || bookingId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to download invoice");
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   if (isLoading) {
     return <Layout><div className="min-h-[70vh] flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div></Layout>;
@@ -77,6 +108,7 @@ export default function BookingDetails() {
                      {bookingStatusLabel(booking.status)}
                    </p>
                   <p className="text-lg font-bold text-primary mt-1">{formatPrice(booking.totalAmount)}</p>
+                  {!!booking.gstRateBps && <p className="text-xs text-muted-foreground">Includes GST {booking.gstRateBps / 100}%: {formatPrice((booking.gstTaxMinor ?? 0) / 100)}</p>}
                    {booking.status === "pending_payment" && (
                      <p className="text-xs text-amber-700 mt-1">
                        Payment hold expires {getPaymentHoldExpiresAt(booking)
@@ -87,11 +119,31 @@ export default function BookingDetails() {
                 </div>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 rounded-xl bg-muted/30 p-4">
-                <div><p className="text-xs text-muted-foreground">Check-in</p><p className="font-medium">{format(new Date(booking.checkIn), "MMM d, yyyy")}</p></div>
-                <div><p className="text-xs text-muted-foreground">Check-out</p><p className="font-medium">{format(new Date(booking.checkOut), "MMM d, yyyy")}</p></div>
-                <div className="col-span-2"><p className="text-xs text-muted-foreground">Room & guests</p><p className="font-medium">{booking.roomsCount} × {booking.roomName} · {booking.guests} guests</p></div>
+                <div><p className="text-xs text-muted-foreground">{booking.bookingType === "day_out" ? "Visit date" : "Check-in"}</p><p className="font-medium">{format(new Date(booking.checkIn), "MMM d, yyyy")}</p></div>
+                {booking.bookingType !== "day_out" && <div><p className="text-xs text-muted-foreground">Check-out</p><p className="font-medium">{format(new Date(booking.checkOut), "MMM d, yyyy")}</p></div>}
+                <div className="col-span-2"><p className="text-xs text-muted-foreground">{booking.bookingType === "day_out" ? "Day Out guests" : "Room & guests"}</p><p className="font-medium">{booking.bookingType === "day_out" ? "" : `${booking.roomsCount} × ${booking.roomName} · `}{booking.guests} guests</p></div>
               </div>
               <BookingPaymentActions booking={booking} />
+              <div className="flex flex-wrap gap-3 border-t pt-6">
+                <Button variant="outline" onClick={handleInvoice} disabled={downloading}>
+                  {downloading ? "Downloading…" : "Invoice · Download PDF"}
+                </Button>
+                {booking.status === "confirmed" && booking.freeCancellation && booking.bookingRef && (
+                  <Button variant="destructive" disabled={cancelBooking.isPending} onClick={() => {
+                    if (!window.confirm("Are you sure you want to cancel this booking?")) return;
+                    cancelBooking.mutate({ id: booking.id, data: { email: booking.guestEmail, bookingRef: booking.bookingRef! } }, {
+                      onSuccess: () => {
+                        toast.success("Booking cancelled successfully");
+                        queryClient.invalidateQueries({ queryKey: getListBookingsQueryKey() });
+                        queryClient.invalidateQueries({ queryKey: getGetBookingByIdQueryKey(bookingId) });
+                      },
+                      onError: error => toast.error(error.message || "Failed to cancel booking"),
+                    });
+                  }}>
+                    {cancelBooking.isPending ? "Cancelling…" : "Cancel Booking"}
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         </div>

@@ -8,15 +8,18 @@ import { Feather, FontAwesome5 } from '@expo/vector-icons';
 import { useSearchProperties, getSearchPropertiesQueryKey, useListPropertyCategories } from '@workspace/api-client-react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { PropertyCard } from '@/components/PropertyCard';
+import { PropertyFilters } from '@/components/PropertyFilters';
+import type { SearchPropertiesParams } from '@workspace/api-client-react';
 
 export default function HotelListScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { q, city, category, country, state, title, maxPrice, latitude, longitude, radiusKm, sort } = useLocalSearchParams<{
+  const { q, city, category, subcategory: initialSubcategory, country, state, title, maxPrice, latitude, longitude, radiusKm, sort } = useLocalSearchParams<{
     q?: string;
     city?: string;
     category?: string;
+    subcategory?: string;
     country?: string;
     state?: string;
     title?: string;
@@ -28,21 +31,20 @@ export default function HotelListScreen() {
   }>();
 
   const { data: categories = [] } = useListPropertyCategories();
-  const [subcategory, setSubcategory] = useState<string | undefined>();
-  useEffect(() => setSubcategory(undefined), [category]);
-  const currentCategory = categories.find(item => item.slug === category);
+  const [filters, setFilters] = useState<SearchPropertiesParams>({ category: category === 'all' ? undefined : category, subcategory: initialSubcategory, maxPrice: maxPrice ? Number(maxPrice) : undefined, sort });
+  useEffect(() => {
+    setFilters({ category: category === 'all' ? undefined : category, subcategory: initialSubcategory, maxPrice: maxPrice ? Number(maxPrice) : undefined, sort });
+  }, [category, initialSubcategory, maxPrice, sort, q, city, country, state]);
+  const currentCategory = categories.find(item => item.slug === filters.category);
   const searchParams = {
-    subcategory,
+    ...filters,
     q,
     city: city || undefined,
     country: country || undefined,
     state: state || undefined,
-    category: category && category !== 'all' ? category : undefined,
-    maxPrice: maxPrice ? Number(maxPrice) : undefined,
     latitude: latitude ? Number(latitude) : undefined,
     longitude: longitude ? Number(longitude) : undefined,
     radiusKm: radiusKm ? Number(radiusKm) : undefined,
-    sort,
   };
 
   const { data: properties, isLoading } = useSearchProperties(
@@ -52,13 +54,7 @@ export default function HotelListScreen() {
 
   const getCategoryName = () => {
     if (currentCategory) return currentCategory.name;
-    switch (category) {
-      case 'budget': return 'Budget Hotels';
-      case 'prime': return 'Premium Hotels';
-      case 'luxury': return 'Luxury Hotels';
-      case 'package': return 'Tour Packages';
-      default: return 'Hotels';
-    }
+    return 'Stays';
   };
 
   return (
@@ -77,10 +73,10 @@ export default function HotelListScreen() {
       {!!currentCategory?.subcategories?.length && <View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ padding: 16, gap: 10 }}>
           {currentCategory.subcategories.map(name => <Pressable key={name}
-            accessibilityRole="checkbox" accessibilityState={{ checked: subcategory === name }}
-            onPress={() => setSubcategory(subcategory === name ? undefined : name)}
-            style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 20, padding: 10, backgroundColor: subcategory === name ? colors.primary : colors.card }}>
-            <ThemedText type="caption" color={subcategory === name ? "#fff" : colors.foreground}>{name}</ThemedText>
+            accessibilityRole="checkbox" accessibilityState={{ checked: filters.subcategory === name }}
+            onPress={() => setFilters({ ...filters, subcategory: filters.subcategory === name ? undefined : name })}
+            style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 20, padding: 10, backgroundColor: filters.subcategory === name ? colors.primary : colors.card }}>
+            <ThemedText type="caption" color={filters.subcategory === name ? "#fff" : colors.foreground}>{name}</ThemedText>
           </Pressable>)}
         </ScrollView>
       </View>}
@@ -89,14 +85,8 @@ export default function HotelListScreen() {
           {isLoading ? 'Searching...' : `${properties?.length || 0} Properties Found`}
         </ThemedText>
         <View style={styles.actions}>
-          <Pressable style={styles.actionBtn}>
-            <Feather name="sliders" size={16} color={colors.primary} />
-            <ThemedText weight="medium" color={colors.primary}>Filters</ThemedText>
-          </Pressable>
-          <Pressable style={styles.actionBtn}>
-            <FontAwesome5 name="sort-amount-down" size={14} color={colors.primary} />
-            <ThemedText weight="medium" color={colors.primary}>Sort</ThemedText>
-          </Pressable>
+          <PropertyFilters value={searchParams} onChange={setFilters} />
+          <PropertyFilters value={searchParams} onChange={setFilters} sortOnly />
         </View>
       </View>
 

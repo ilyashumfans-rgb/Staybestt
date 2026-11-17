@@ -21,6 +21,129 @@ tags:
   - name: agent
   - name: employee
 paths:
+  /admin/agent-agreement-template:
+    get:
+      operationId: getSharedAgentAgreement
+      responses:
+        "200":
+          description: Shared agreement for all agents
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AgentAgreementTemplate" }
+    put:
+      operationId: saveSharedAgentAgreement
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AgentAgreementTemplate" }
+      responses:
+        "200":
+          description: Updated agreement for all future agent downloads
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AgentAgreementTemplate" }
+  /admin/agents/{id}/login:
+    get:
+      operationId: getAdminAgentLogin
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Agent login details without stored passwords
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AdminAgentLogin" }
+    put:
+      operationId: updateAdminAgentLogin
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AgentPasswordInput" }
+      responses:
+        "200":
+          description: Password updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AdminAgentLogin" }
+  /admin/agents/{agentId}/agreement-details:
+    get:
+      operationId: getAgentAgreementDetails
+      parameters:
+        - { name: agentId, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Agent agreement profile and editable text
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AgentAgreementDetails" }
+    put:
+      operationId: saveAgentAgreementDetails
+      parameters:
+        - { name: agentId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AgentAgreementDetails" }
+      responses:
+        "200":
+          description: Saved agreement profile
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AgentAgreementDetails" }
+  /agent/submitted-properties/{id}/rooms:
+    get:
+      operationId: listAgentPropertyRooms
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Rooms for an agent-owned property
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Room" }
+  /agent/rooms:
+    post:
+      operationId: createAgentRoom
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RoomInput" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Room" }
+  /agent/rooms/{id}:
+    put:
+      operationId: updateAgentRoom
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RoomInput" }
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Room" }
   /partner/alerts/config:
     get:
       operationId: getPartnerAlertsConfig
@@ -2138,6 +2261,10 @@ paths:
           in: query
           description: Comma-separated categories (prime,luxury,budget,package)
           schema: { type: string }
+        - name: subcategory
+          in: query
+          description: Match a property or available room with this subcategory.
+          schema: { type: string }
         - name: minPrice
           in: query
           schema: { type: number }
@@ -2205,6 +2332,21 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiMessage"
+  /day-out/quote:
+    get:
+      operationId: getDayOutQuote
+      parameters:
+        - { name: propertyId, in: query, required: true, schema: { type: integer } }
+        - { name: date, in: query, required: true, schema: { type: string } }
+        - { name: guests, in: query, required: true, schema: { type: integer, minimum: 1, maximum: 100 } }
+      responses:
+        "200":
+          description: Per-person day visit quote
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DayOutQuote" }
+        "400":
+          description: Invalid day visit
   /availability:
     get:
       operationId: getAvailability
@@ -2388,6 +2530,36 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiMessage"
+  /bookings/{id}/invoice:
+    get:
+      operationId: downloadBookingInvoice
+      tags: [Bookings]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: query
+          name: email
+          schema:
+            type: string
+        - in: query
+          name: bookingRef
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Existing invoice PDF for the booking owner
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: Booking or issued invoice unavailable
+        "409":
+          description: Billing settings unavailable
   /bookings/{id}/cancel:
     post:
       operationId: cancelBooking
@@ -3539,6 +3711,41 @@ components:
         rejected.
       schema: { type: string, minLength: 1, maxLength: 512 }
   schemas:
+    AdminAgentLogin:
+      type: object
+      required: [username, email, passwordEnabled, canReset]
+      properties:
+        userId: { type: string }
+        username: { type: string }
+        email: { type: string }
+        passwordEnabled: { type: boolean }
+        canReset: { type: boolean }
+    AgentPasswordInput:
+      type: object
+      required: [username]
+      properties:
+        username: { type: string, minLength: 3, maxLength: 30, pattern: "^[a-z0-9][a-z0-9._-]{2,29}$" }
+        password: { type: string, minLength: 8, maxLength: 128 }
+    AgentAgreementTemplate:
+      type: object
+      required: [template, cin, signatory, designation]
+      properties:
+        template: { type: string, minLength: 100, maxLength: 50000 }
+        cin: { type: string, maxLength: 100 }
+        signatory: { type: string, maxLength: 200 }
+        designation: { type: string, maxLength: 200 }
+    AgentAgreementDetails:
+      type: object
+      required: [fullName, email, fatherName, address, mobile, pan, bank, commission]
+      properties:
+        fullName: { type: string, maxLength: 200 }
+        email: { type: string, maxLength: 300 }
+        fatherName: { type: string, maxLength: 200 }
+        address: { type: string, maxLength: 2000 }
+        mobile: { type: string, maxLength: 100 }
+        pan: { type: string, maxLength: 100 }
+        bank: { type: string, maxLength: 2000 }
+        commission: { type: string, maxLength: 300 }
     PartnerPushSubscriptionInput:
       type: object
       required: [endpoint, keys]
@@ -3606,6 +3813,8 @@ components:
     BillingSettingsInput:
       type: object
       properties:
+        gstRateBps: { type: integer, minimum: 0, maximum: 10000 }
+        gstMode: { type: string, enum: [inclusive, exclusive] }
         businessName: { type: string, minLength: 1, maxLength: 200 }
         address: { type: string, minLength: 1, maxLength: 1000 }
         taxRegistration: { type: ["string", "null"], maxLength: 100 }
@@ -3641,6 +3850,7 @@ components:
     InvoiceInput:
       type: object
       properties:
+        gstMode: { type: string, enum: [inclusive, exclusive] }
         bookingId: { type: ["integer", "null"] }
         customerName: { type: string, minLength: 1, maxLength: 200 }
         customerEmail: { type: string, format: email, minLength: 3, maxLength: 320 }
@@ -3813,8 +4023,8 @@ components:
     InvoiceEmailStatus:
       type: object
       properties:
-        status: { type: string, enum: [unavailable] }
-        configured: { type: boolean, enum: [false] }
+        status: { type: string, enum: [unavailable, pending, sent, failed, skipped, not_queued] }
+        configured: { type: boolean }
         message: { type: string }
       required: [status, configured, message]
     UserPreferences:
@@ -4318,6 +4528,7 @@ components:
     PartnerPropertyInput:
       type: object
       properties:
+        subcategories: { $ref: "#/components/schemas/SubcategorySelection" }
         name: { type: string, minLength: 1 }
         category: { type: string, description: "Managed property category slug" }
         country: { type: string, minLength: 1 }
@@ -4738,9 +4949,14 @@ components:
           type: array
           items: { $ref: "#/components/schemas/PostalDirectoryEntry" }
       required: [updated, approved, locationsUpdated, items]
+    SubcategorySelection:
+      type: array
+      maxItems: 50
+      items: { type: string, minLength: 1, maxLength: 80 }
     PropertyCategory:
       type: object
       properties:
+        subcategories: { $ref: "#/components/schemas/SubcategorySelection" }
         id: { type: integer }
         name: { type: string }
         slug: { type: string }
@@ -4752,6 +4968,7 @@ components:
     PropertyCategoryInput:
       type: object
       properties:
+        subcategories: { $ref: "#/components/schemas/SubcategorySelection" }
         name: { type: string, minLength: 1 }
         slug:
           type: string
@@ -4787,6 +5004,7 @@ components:
     PropertySummary:
       type: object
       properties:
+        subcategories: { $ref: "#/components/schemas/SubcategorySelection" }
         status: { type: string, description: "pending | approved | active | suspended | rejected" }
         id: { type: integer }
         propertyNumber:
@@ -4849,6 +5067,7 @@ components:
     Room:
       type: object
       properties:
+        subcategories: { $ref: "#/components/schemas/SubcategorySelection" }
         isAvailable: { type: boolean }
         id: { type: integer }
         propertyId: { type: integer }
@@ -4868,9 +5087,21 @@ components:
       required:
         [id, propertyId, name, description, imageUrl, images, maxGuests, totalRooms,
          pricePerNight, amenities]
+    DayOutQuote:
+      type: object
+      properties:
+        pricePerPerson: { type: number }
+        baseTotalPrice: { type: number }
+        totalPrice: { type: number }
+        gstRateBps: { type: integer }
+        gstMode: { type: string }
+      required: [pricePerPerson, baseTotalPrice, totalPrice, gstRateBps, gstMode]
     RoomAvailability:
       type: object
       properties:
+        baseTotalPrice: { type: number }
+        gstRateBps: { type: integer }
+        gstMode: { type: string, enum: [inclusive, exclusive] }
         room: { $ref: "#/components/schemas/Room" }
         availableRooms: { type: integer }
         nights: { type: integer }
@@ -4898,23 +5129,24 @@ components:
       type: object
       properties:
         propertyId: { type: integer }
-        roomId: { type: integer }
+        roomId: { type: ["integer", "null"] }
         checkIn: { type: string }
         checkOut: { type: string }
         guests: { type: integer, minimum: 1 }
         adults: { type: integer, minimum: 1 }
         children: { type: integer, minimum: 0 }
-        roomsCount: { type: integer, minimum: 1 }
+        roomsCount: { type: integer, minimum: 0 }
         guestName: { type: string, minLength: 1 }
         guestEmail: { type: string, minLength: 3 }
         guestPhone: { type: ["string", "null"] }
         specialRequests: { type: ["string", "null"] }
         couponCode: { type: ["string", "null"] }
       required:
-        [propertyId, roomId, checkIn, checkOut, guests, roomsCount, guestName, guestEmail]
+        [propertyId, checkIn, checkOut, guests, roomsCount, guestName, guestEmail]
     AgentPropertyInput:
       type: object
       properties:
+        subcategories: { $ref: "#/components/schemas/SubcategorySelection" }
         name: { type: string, minLength: 1 }
         category: { type: string }
         country: { type: string, minLength: 1 }
@@ -5188,13 +5420,17 @@ components:
     Booking:
       type: object
       properties:
+        bookingType: { type: string, enum: [room, day_out] }
+        gstRateBps: { type: integer }
+        gstMode: { type: string }
+        gstTaxMinor: { type: integer }
         id: { type: integer }
         bookingRef: { type: ["string", "null"] }
         propertyId: { type: integer }
         propertyName: { type: string }
         propertyCity: { type: string }
         propertyImageUrl: { type: string }
-        roomId: { type: integer }
+        roomId: { type: ["integer", "null"] }
         roomName: { type: string }
         checkIn: { type: string }
         checkOut: { type: string }
@@ -5371,6 +5607,7 @@ components:
     PropertyInput:
       type: object
       properties:
+        subcategories: { $ref: "#/components/schemas/SubcategorySelection" }
         ownerId: { type: string, nullable: true }
         name: { type: string, minLength: 1 }
         category: { type: string, description: "Managed or legacy property category slug" }
@@ -5410,6 +5647,7 @@ components:
     RoomInput:
       type: object
       properties:
+        subcategories: { $ref: "#/components/schemas/SubcategorySelection" }
         propertyId: { type: integer }
         name: { type: string, minLength: 1 }
         description: { type: string, minLength: 1 }

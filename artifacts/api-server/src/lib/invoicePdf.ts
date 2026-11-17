@@ -507,7 +507,7 @@ export async function generateInvoicePdf(input: InvoicePdfInput): Promise<Buffer
     const booking = input.invoice.booking;
     const bookingText =
       `${normalize(booking.propertyName)} · ${normalize(booking.roomName)}\n` +
-      `Booking ${normalize(booking.bookingRef ?? "payment capture")} · ${booking.checkIn} to ${booking.checkOut} · ${amount(booking.totalMinor)}`;
+      `Booking ${normalize(booking.bookingRef ?? "payment capture")} · ${booking.checkIn === booking.checkOut ? `Visit date ${booking.checkIn}` : `${booking.checkIn} to ${booking.checkOut}`} · ${amount(booking.totalMinor)}`;
     page.drawRectangle({
       x: layout.left,
       y: y - 42,

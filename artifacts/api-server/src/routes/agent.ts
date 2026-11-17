@@ -14,9 +14,49 @@ import { requireRole } from "../lib/auth";
 import { toBookingDto, toPropertySummary } from "../lib/mappers";
 import { propertyLocationExistsInCatalog } from "../lib/locationCatalog";
 import { isValidTimeZone } from "../lib/cancellationPolicy";
+import { validateSubcategories } from "../lib/subcategories";
+import { validateRoomSubcategories } from "../lib/subcategories";
+import { CreateAgentRoomBody, UpdateAgentRoomBody, UpdateAgentRoomParams, ListAgentPropertyRoomsParams, ListAgentPropertyRoomsResponse, CreateAgentRoomResponse, UpdateAgentRoomResponse } from "@workspace/api-zod";
+import { toRoomDto } from "../lib/mappers";
 
 const router: IRouter = Router();
 router.use("/agent", requireRole("agent", "admin"));
+
+router.get("/agent/submitted-properties/:id/rooms", async (req, res): Promise<void> => {
+  const params = ListAgentPropertyRoomsParams.safeParse(req.params);
+  if (!params.success) { res.status(400).json({ message: "Invalid property" }); return; }
+  const [property] = await db.select().from(propertiesTable).where(and(eq(propertiesTable.id, params.data.id), eq(propertiesTable.ownerId, req.currentUser!.id)));
+  if (!property) { res.status(403).json({ message: "You do not own this property" }); return; }
+  const rooms = await db.select().from(roomsTable).where(eq(roomsTable.propertyId, property.id));
+  res.json(ListAgentPropertyRoomsResponse.parse(rooms.map(toRoomDto)));
+});
+
+router.post("/agent/rooms", async (req, res): Promise<void> => {
+  const body = CreateAgentRoomBody.safeParse(req.body);
+  if (!body.success) { res.status(400).json({ message: "Invalid room details" }); return; }
+  const [property] = await db.select().from(propertiesTable).where(and(eq(propertiesTable.id, body.data.propertyId), eq(propertiesTable.ownerId, req.currentUser!.id)));
+  if (!property) { res.status(403).json({ message: "You do not own this property" }); return; }
+  if (!(await validateRoomSubcategories(property.id, body.data.subcategories))) {
+    res.status(400).json({ message: "Select subcategories belonging to this property's category" }); return;
+  }
+  const [room] = await db.insert(roomsTable).values(body.data).returning();
+  res.status(201).json(CreateAgentRoomResponse.parse(toRoomDto(room!)));
+});
+
+router.put("/agent/rooms/:id", async (req, res): Promise<void> => {
+  const params = UpdateAgentRoomParams.safeParse(req.params);
+  const body = UpdateAgentRoomBody.safeParse(req.body);
+  if (!params.success || !body.success) { res.status(400).json({ message: "Invalid room details" }); return; }
+  const [owned] = await db.select({ room: roomsTable }).from(roomsTable)
+    .innerJoin(propertiesTable, eq(propertiesTable.id, roomsTable.propertyId))
+    .where(and(eq(roomsTable.id, params.data.id), eq(propertiesTable.ownerId, req.currentUser!.id)));
+  if (!owned) { res.status(403).json({ message: "You do not own this room" }); return; }
+  if (owned.room.propertyId !== body.data.propertyId || !(await validateRoomSubcategories(owned.room.propertyId, body.data.subcategories ?? owned.room.subcategories))) {
+    res.status(400).json({ message: "Room property and subcategories must match" }); return;
+  }
+  const [room] = await db.update(roomsTable).set(body.data).where(eq(roomsTable.id, owned.room.id)).returning();
+  res.json(UpdateAgentRoomResponse.parse(toRoomDto(room!)));
+});
 
 router.get("/agent/stats", async (req, res): Promise<void> => {
   const userId = req.currentUser!.id;
@@ -61,6 +101,9 @@ router.post("/agent/submitted-properties", async (req, res): Promise<void> => {
     res.status(400).json({ message: body.error.message }); return;
   }
   const d = body.data;
+  if (!(await validateSubcategories(d.category, d.subcategories))) {
+    res.status(400).json({ message: "Select subcategories belonging to this category" }); return;
+  }
   if (!/^\d{6}$/.test(d.pincode.trim())) {
     res.status(400).json({ message: "Pincode must be exactly 6 digits" }); return;
   }
@@ -72,6 +115,7 @@ router.post("/agent/submitted-properties", async (req, res): Promise<void> => {
   }
   const [created] = await db.insert(propertiesTable).values({
     ownerId: req.currentUser!.id, name: d.name.trim(), category: d.category,
+    subcategories: d.subcategories ?? [],
     country: d.country.trim(), state: d.state.trim(), city: d.city.trim(), area: d.area.trim(),
     pincode: d.pincode.trim(), address: d.address.trim(), description: d.description.trim(),
     imageUrl: d.imageUrl.trim(), images: d.images ?? [d.imageUrl.trim()],
@@ -90,7 +134,7 @@ router.post("/agent/submitted-properties", async (req, res): Promise<void> => {
 router.get("/agent/bookings", async (req, res): Promise<void> => {
   const rows = await db.select().from(bookingsTable)
     .innerJoin(propertiesTable, eq(bookingsTable.propertyId, propertiesTable.id))
-    .innerJoin(roomsTable, eq(bookingsTable.roomId, roomsTable.id))
+    .leftJoin(roomsTable, eq(bookingsTable.roomId, roomsTable.id))
     .where(eq(bookingsTable.agentId, req.currentUser!.id)).orderBy(desc(bookingsTable.createdAt));
   req.log.info({ count: rows.length }, "Listed agent attributed bookings");
   res.json(ListAgentBookingsResponse.parse(rows.map((r) => toBookingDto(r.bookings, r.properties, r.rooms))));

@@ -17,6 +17,7 @@ import BookingDetails from '@/pages/booking-details';
 import MyBookings from '@/pages/my-bookings';
 import Wishlist from '@/pages/wishlist';
 import MobilePayment from '@/pages/mobile-payment';
+import DeleteAccountPage from '@/pages/delete-account';
 
 // Admin Pages
 import AdminLogin from '@/pages/admin/login';
@@ -200,7 +201,7 @@ function SignInPage() {
   return (
     <div className="flex min-h-[100dvh] flex-col items-center justify-center gap-5 bg-[#0b1a30] px-4 py-10">
       <form onSubmit={onCustomerLogin} className="w-full max-w-sm rounded-xl bg-white p-5 space-y-3">
-        <h2 className="text-lg font-semibold">Customer username login</h2>
+        <h2 className="text-lg font-semibold">Customer / agent username login</h2>
         <input className="w-full rounded border p-2" aria-label="Username" autoComplete="username" placeholder="Username" value={username} onChange={(event) => setUsername(event.target.value)} required />
         <input className="w-full rounded border p-2" aria-label="Password" type="password" autoComplete="current-password" placeholder="Password" value={password} onChange={(event) => setPassword(event.target.value)} required />
         {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
@@ -312,6 +313,7 @@ function Router() {
       <Route path="/contact">{() => <CmsPage slug="contact" />}</Route>
       <Route path="/faq">{() => <CmsPage slug="faq" />}</Route>
       <Route path="/privacy">{() => <CmsPage slug="privacy" />}</Route>
+      <Route path="/delete-account" component={DeleteAccountPage} />
       <Route path="/terms">{() => <CmsPage slug="terms" />}</Route>
       <Route component={NotFound} />
     </Switch>

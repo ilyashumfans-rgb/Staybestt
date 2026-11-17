@@ -6,7 +6,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather, FontAwesome5 } from '@expo/vector-icons';
-import { useGetProperty, getGetPropertyQueryKey, useGetAmenityCatalog, groupSelectedAmenities } from '@workspace/api-client-react';
+import { useGetProperty, getGetPropertyQueryKey, useGetAmenityCatalog, groupSelectedAmenities, isDayOutCategory } from '@workspace/api-client-react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { getImageUrl } from '@/utils/images';
 import { HeartButton } from '@/components/HeartButton';
@@ -224,7 +224,7 @@ export default function PropertyDetailScreen() {
 
           <View style={styles.divider} />
 
-          <View style={styles.section}>
+          {!isDayOutCategory(property.category) && <View style={styles.section}>
             <ThemedText type="subtitle" weight="bold" style={styles.sectionTitle}>Rooms</ThemedText>
             <View style={{ gap: 16 }}>
               {property.rooms?.map(room => (
@@ -244,7 +244,7 @@ export default function PropertyDetailScreen() {
                 </View>
               ))}
             </View>
-          </View>
+          </View>}
 
           {property.latitude != null && property.longitude != null && (
             <>
@@ -296,13 +296,13 @@ export default function PropertyDetailScreen() {
         <View style={styles.bottomBarContent}>
           <View>
             <ThemedText type="subtitle" weight="bold">₹{property.startingPrice.toLocaleString()}</ThemedText>
-            <ThemedText type="caption" color={colors.mutedForeground}>avg / night</ThemedText>
+            <ThemedText type="caption" color={colors.mutedForeground}>{isDayOutCategory(property.category) ? 'per person' : 'avg / night'}</ThemedText>
           </View>
           <Pressable 
             style={[styles.bookBtn, { backgroundColor: colors.primary }]}
-            onPress={() => router.push(`/property/${property.id}/book`)}
+            onPress={() => router.push(isDayOutCategory(property.category) ? `/property/${property.id}/day-out` : `/property/${property.id}/book`)}
           >
-            <ThemedText weight="bold" color="#fff">Check Availability</ThemedText>
+            <ThemedText weight="bold" color="#fff">{isDayOutCategory(property.category) ? 'Book Day Out Today' : 'Check Availability'}</ThemedText>
           </Pressable>
         </View>
       </Animated.View>

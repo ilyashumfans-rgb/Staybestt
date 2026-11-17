@@ -24,6 +24,8 @@ export const billingSettingsTable = pgTable("billing_settings", {
   businessName: text("business_name").notNull(),
   address: text("address").notNull(),
   taxRegistration: text("tax_registration"),
+  gstRateBps: integer("gst_rate_bps").notNull().default(0),
+  gstMode: text("gst_mode").notNull().default("exclusive"),
   email: text("email"),
   phone: text("phone"),
   logoUrl: text("logo_url"),

@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { and, eq } from "drizzle-orm";
+import { and, eq, or } from "drizzle-orm";
 import { clerkClient } from "@clerk/express";
 import { customerLoginsTable, db, usersTable } from "@workspace/db";
 
@@ -31,7 +31,8 @@ router.post("/customer/login", async (req, res): Promise<void> => {
   const [account] = await db.select({ id: usersTable.id })
     .from(customerLoginsTable)
     .innerJoin(usersTable, eq(usersTable.id, customerLoginsTable.userId))
-    .where(and(eq(customerLoginsTable.username, username), eq(usersTable.role, "customer"), eq(usersTable.status, "active")))
+    .where(and(eq(customerLoginsTable.username, username), eq(usersTable.status, "active"),
+      or(eq(usersTable.role, "customer"), and(eq(usersTable.role, "agent"), eq(usersTable.approvalStatus, "approved")))))
     .limit(1);
   if (!account) { await fail(); return; }
   try {

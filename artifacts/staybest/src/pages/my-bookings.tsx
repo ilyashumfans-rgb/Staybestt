@@ -1,5 +1,5 @@
 import { Layout } from "@/components/layout/Layout";
-import { useListBookings, useCancelBooking, getListBookingsQueryKey } from "@workspace/api-client-react";
+import { useListBookings, getListBookingsQueryKey } from "@workspace/api-client-react";
 import { useGuestIdentity } from "@/hooks/use-auth";
 import { useUser, useClerk } from "@clerk/react";
 import { useState } from "react";
@@ -9,8 +9,6 @@ import { formatPrice } from "@/lib/utils";
 import { Calendar, MapPin, Search, XCircle, CheckCircle, Clock } from "lucide-react";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
-import { useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
 import { Link } from "wouter";
 import { BookingPaymentActions } from "@/components/BookingPaymentActions";
 import { bookingStatusLabel, getPaymentHoldExpiresAt } from "@/lib/booking-display";
@@ -20,7 +18,6 @@ export default function MyBookings() {
   const { user, isSignedIn } = useUser();
   const { signOut } = useClerk();
   const [lookupEmail, setLookupEmail] = useState("");
-  const queryClient = useQueryClient();
   const ownerEmail = user?.primaryEmailAddress?.emailAddress || email;
   const bookingListParams = isSignedIn ? undefined : (email ? { email } : undefined);
 
@@ -29,29 +26,9 @@ export default function MyBookings() {
     { query: { enabled: isSignedIn || !!email, queryKey: getListBookingsQueryKey(bookingListParams) } }
   );
 
-  const cancelBooking = useCancelBooking();
-
   const handleLookup = (e: React.FormEvent) => {
     e.preventDefault();
     if (lookupEmail) setEmail(lookupEmail);
-  };
-
-  const handleCancel = (bookingId: number, bookingRef: string | null | undefined) => {
-    if (!bookingRef) {
-      toast.error("This booking has no reference yet because payment is still pending.");
-      return;
-    }
-    if (confirm("Are you sure you want to cancel this booking?")) {
-      cancelBooking.mutate({ id: bookingId, data: { email: ownerEmail, bookingRef } }, {
-        onSuccess: () => {
-          toast.success("Booking cancelled successfully");
-          queryClient.invalidateQueries({ queryKey: getListBookingsQueryKey(bookingListParams) });
-        },
-        onError: (err) => {
-          toast.error(err.message || "Failed to cancel booking");
-        }
-      });
-    }
   };
 
   if (!isSignedIn && !email) {
@@ -172,17 +149,17 @@ export default function MyBookings() {
 
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 py-4 border-y border-dashed mb-4 bg-muted/20 px-4 rounded-xl">
                       <div>
-                        <p className="text-xs text-muted-foreground mb-0.5">Check-in</p>
+                        <p className="text-xs text-muted-foreground mb-0.5">{booking.bookingType === "day_out" ? "Visit date" : "Check-in"}</p>
                         <p className="font-medium text-sm">{format(new Date(booking.checkIn), "MMM d, yyyy")}</p>
                       </div>
-                      <div>
+                      {booking.bookingType !== "day_out" && <div>
                         <p className="text-xs text-muted-foreground mb-0.5">Check-out</p>
                         <p className="font-medium text-sm">{format(new Date(booking.checkOut), "MMM d, yyyy")}</p>
-                      </div>
+                      </div>}
                       <div className="col-span-2 md:col-span-2">
-                        <p className="text-xs text-muted-foreground mb-0.5">Room & Guests</p>
+                        <p className="text-xs text-muted-foreground mb-0.5">{booking.bookingType === "day_out" ? "Day Out guests" : "Room & Guests"}</p>
                         <p className="font-medium text-sm line-clamp-1">
-                          {booking.roomsCount} × {booking.roomName} ({booking.adults} Adult{booking.adults === 1 ? "" : "s"}{booking.children > 0 ? `, ${booking.children} Child${booking.children === 1 ? "" : "ren"}` : ""})
+                          {booking.bookingType === "day_out" ? `${booking.guests} guests` : `${booking.roomsCount} × ${booking.roomName} (${booking.adults} Adults${booking.children > 0 ? `, ${booking.children} Children` : ""})`}
                         </p>
                       </div>
                     </div>
@@ -204,18 +181,6 @@ export default function MyBookings() {
                         )}
                       </div>
                       
-                      <div className="flex items-center gap-2">
-                        {booking.status === 'confirmed' && booking.freeCancellation && booking.bookingRef && (
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => handleCancel(booking.id, booking.bookingRef)}
-                            disabled={cancelBooking.isPending}
-                          >
-                            Cancel Booking
-                          </Button>
-                        )}
-                      </div>
                     </div>
                     <div className="mt-4">
                       <BookingPaymentActions booking={booking} compact />

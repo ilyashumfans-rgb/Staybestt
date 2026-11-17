@@ -1,0 +1,96 @@
+{{companyName}}
+AGENT PARTNERSHIP AGREEMENT
+
+Website: www.staybestt.com
+Sender ID / Agreement No.: {{agentId}}
+This Agreement is made on {{date}} between:
+
+1. COMPANY DETAILS
+Company Name: {{companyName}}
+Registered Office: {{companyAddress}}
+CIN: {{cin}}
+GSTIN: {{gst}}
+Company Email: {{companyEmail}}
+Company Phone: {{companyPhone}}
+Hereinafter referred to as the “Company” or “Staybestt”.
+
+2. AGENT DETAILS
+Full Name: {{fullName}}
+Father's Name: {{fatherName}}
+Address: {{address}}
+Mobile Number: {{mobile}}
+Email ID: {{email}}
+PAN Number: {{pan}}
+Bank Account Details: {{bank}}
+Hereinafter referred to as the “Agent”.
+
+3. PURPOSE OF AGREEMENT
+The Company appoints the Agent as an independent business associate to promote Staybestt services, introduce property owners and generate eligible bookings through the Staybestt platform.
+
+4. BUSINESS CATEGORIES
+The Agent may introduce business partners under the following categories: Hotels, Resorts, Homestays, Villas, and Day Out activities and packages.
+
+5. AGENT RESPONSIBILITIES
+The Agent agrees to identify and introduce potential property owners; promote Staybestt services; generate genuine customer bookings; coordinate with vendors and customers when required; provide accurate information; follow company policies; maintain professional conduct; and protect the reputation and brand of Staybestt.
+
+6. AGENT COMMISSION STRUCTURE
+Agent Commission: {{commission}}
+
+The Agent shall receive commission for eligible and successfully completed bookings generated through the Agent's registered referrals. Commission shall be calculated on the net commission revenue actually earned and received by Staybestt for the eligible booking, unless otherwise agreed in writing.
+
+7. COMMISSION PAYMENT TERMS
+1. Commission will be calculated after successful completion of the hotel stay or Day Out service.
+2. Cancelled bookings will not qualify for commission.
+3. Fully refunded bookings will not qualify for commission.
+4. Commission will be processed monthly.
+5. The Company will maintain booking and commission records.
+6. Applicable TDS and other statutory deductions will be made.
+7. Commission payments will be transferred to the Agent's registered bank account.
+
+8. BOOKING AND CUSTOMER MANAGEMENT
+All bookings must be processed through Staybestt's official website or application. Agents must not make unauthorised booking commitments, collect customer payments without written permission, or misuse customer information.
+
+9. CONFIDENTIALITY
+The Agent shall not disclose confidential company information, vendor details, customer information, commission structures or business strategies to unauthorised persons.
+
+10. BRAND AND COMPANY REPRESENTATION
+The Agent shall not misuse the Staybestt name or logo, make false promises to customers, offer unauthorised discounts, enter into agreements on behalf of Staybestt without written authorisation, or collect unauthorised payments.
+
+11. NON-CIRCUMVENTION
+The Agent shall not misuse company-provided vendor or customer information to bypass Staybestt or divert business opportunities for personal benefit.
+
+12. INDEPENDENT CONTRACTOR
+The Agent shall work as an independent business associate. Nothing in this Agreement creates an employer-employee relationship, partnership or joint venture. The Agent shall not be entitled to employee benefits from Staybestt.
+
+13. TERMINATION
+Either party may terminate this Agreement by providing 15 days' written notice. Staybestt may terminate the Agreement immediately in cases of fraud, misconduct, unauthorised activities or serious breach. Eligible outstanding commissions shall be settled according to the agreed commission terms.
+
+14. LIABILITY AND INDEMNITY
+The Agent shall be responsible for losses arising from fraud, wilful misconduct, unauthorised representations or breach of this Agreement. Each party shall remain responsible for its own acts and legal obligations.
+
+15. AGREEMENT VALIDITY
+This Agreement shall remain valid for one year from the date of signing and may be renewed by mutual written agreement.
+
+16. DISPUTE RESOLUTION
+Any disputes shall first be resolved through mutual discussion. If unresolved, disputes shall be subject to the jurisdiction of competent courts in Bengaluru, Karnataka, India, subject to applicable law.
+
+17. DECLARATION
+The Agent confirms that all information provided is accurate and agrees to follow the terms and conditions of this Agreement.
+
+18. SIGNATURES
+FOR {{companyName}}
+Authorised Signatory: {{signatory}}
+Designation: {{designation}}
+Signature: _______________________________
+Date: {{date}}
+Company Seal:
+
+AGENT
+Full Name: {{fullName}}
+Signature: _______________________________
+Date: {{date}}
+
+WITNESS 1 Name: ____________________________ Signature: ____________________________
+WITNESS 2 Name: ____________________________ Signature: ____________________________
+
+Important: This is a draft template. Complete all blanks and have an Indian commercial lawyer review it before signing, including commission attribution, tax treatment, data protection, liability and enforceability.

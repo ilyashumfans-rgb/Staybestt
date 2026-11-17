@@ -29,11 +29,13 @@ function CategoryRow({
   const deleteCategory = useDeletePropertyCategory();
   const [name, setName] = useState(category.name);
   const [sortOrder, setSortOrder] = useState(String(category.sortOrder));
+  const [subcategories, setSubcategories] = useState((category.subcategories ?? []).join("\n"));
 
   useEffect(() => {
     setName(category.name);
     setSortOrder(String(category.sortOrder));
-  }, [category.name, category.sortOrder]);
+    setSubcategories((category.subcategories ?? []).join("\n"));
+  }, [category.name, category.sortOrder, category.subcategories]);
 
   const update = (patch: Partial<PropertyCategory>) => {
     updateCategory.mutate(
@@ -44,6 +46,7 @@ function CategoryRow({
           slug: category.slug,
           active: patch.active ?? category.active,
           sortOrder: patch.sortOrder ?? Number(sortOrder),
+          subcategories: [...new Set(subcategories.split("\n").map(name => name.trim()).filter(Boolean))],
         },
       },
       {
@@ -116,6 +119,11 @@ function CategoryRow({
         >
           <Trash2 className="h-4 w-4 text-destructive" />
         </Button>
+      </div>
+      <div className="md:col-span-full">
+        <label className="mb-1 block text-sm font-semibold">Subcategories — one per line</label>
+        <textarea aria-label={`${category.name} subcategories`} className="w-full rounded-md border p-3 text-sm" rows={5} value={subcategories} onChange={event => setSubcategories(event.target.value)} />
+        <p className="text-xs text-muted-foreground">Use Save above to apply. Subcategories in use cannot be removed or renamed until their property and room selections are cleared.</p>
       </div>
     </div>
   );

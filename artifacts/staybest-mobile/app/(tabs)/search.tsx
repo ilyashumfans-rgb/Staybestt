@@ -9,6 +9,8 @@ import { useSearchProperties, getSearchPropertiesQueryKey, useListPropertyCatego
 import { PropertyCard } from '@/components/PropertyCard';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Location from 'expo-location';
+import { PropertyFilters } from '@/components/PropertyFilters';
+import type { SearchPropertiesParams } from '@workspace/api-client-react';
 
 export default function SearchScreen() {
   const colors = useColors();
@@ -19,6 +21,7 @@ export default function SearchScreen() {
   const [query, setQuery] = useState((params.city as string) || '');
   const [selectedCategory, setSelectedCategory] = useState<string | null>((params.category as string) || null);
   const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
+  const [extraFilters, setExtraFilters] = useState<SearchPropertiesParams>({});
   const [isLocating, setIsLocating] = useState(false);
   const [nearby, setNearby] = useState<{ latitude: number; longitude: number } | null>(null);
   
@@ -26,13 +29,14 @@ export default function SearchScreen() {
   const { data: categories = [] } = useListPropertyCategories();
 
   const searchParams = {
+    ...extraFilters,
     q: debouncedQuery,
     category: selectedCategory || undefined,
     subcategory: selectedSubcategory || undefined,
     latitude: nearby?.latitude,
     longitude: nearby?.longitude,
     radiusKm: nearby ? 50 : undefined,
-    sort: nearby ? 'distance' : undefined,
+    sort: extraFilters.sort ?? (nearby ? 'distance' : undefined),
   };
 
   const { data: properties, isLoading } = useSearchProperties(
@@ -137,7 +141,7 @@ export default function SearchScreen() {
               All
             </ThemedText>
           </Pressable>
-          {categories.map(category => {
+          {categories.filter(category => category.active).map(category => {
             const isSelected = selectedCategory === category.slug;
             return (
               <Pressable
@@ -163,6 +167,11 @@ export default function SearchScreen() {
             );
           })}
         </ScrollView>
+        <PropertyFilters value={searchParams} onChange={next => {
+          setSelectedCategory(next.category ?? null);
+          setSelectedSubcategory(next.subcategory ?? null);
+          setExtraFilters(next);
+        }} />
         {!!categories.find(category => category.slug === selectedCategory)?.subcategories?.length && (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
             {categories.find(category => category.slug === selectedCategory)?.subcategories?.map(name => (

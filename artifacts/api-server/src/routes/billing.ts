@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import {
   billingSettingsTable,
+  bookingEmailsTable,
   bookingRefundsTable,
   bookingsTable,
   db,
@@ -48,12 +49,48 @@ import {
 } from "../lib/invoiceSnapshot";
 import { mapBookingRefund } from "../lib/refunds";
 import { requireAdmin } from "./admin";
+import { resolveUser } from "../lib/auth";
 import { lockRoomAndBooking, lockInvoice } from "../lib/advisoryLocks";
 
 const router: IRouter = Router();
 
 router.use("/admin/billing-settings", requireAdmin);
 router.use("/admin/invoices", requireAdmin);
+
+router.get("/bookings/:id/invoice", async (req, res): Promise<void> => {
+  res.set("Cache-Control", "private, no-store");
+  const id = Number(req.params.id);
+  if (!Number.isSafeInteger(id) || id <= 0) {
+    res.status(400).json({ message: "Invalid booking" });
+    return;
+  }
+  const user = await resolveUser(req);
+  const [booking] = await db.select().from(bookingsTable).where(eq(bookingsTable.id, id));
+  const email = typeof req.query.email === "string" ? req.query.email.toLowerCase() : null;
+  const ref = typeof req.query.bookingRef === "string" ? req.query.bookingRef.trim().toUpperCase() : null;
+  const owner = booking && (
+    (user && (booking.userId === user.id || booking.guestEmail === user.email.toLowerCase())) ||
+    (email && ref && booking.guestEmail === email && booking.bookingRef?.toUpperCase() === ref)
+  );
+  if (!owner) {
+    res.status(404).json({ message: "Booking not found" });
+    return;
+  }
+  const [record] = await db.select({ id: invoicesTable.id }).from(invoicesTable)
+    .where(eq(invoicesTable.bookingId, id)).orderBy(desc(invoicesTable.id)).limit(1);
+  const invoice = record ? await loadInvoice(record.id) : null;
+  if (!invoice) {
+    res.status(404).json({ message: "Your invoice has not been issued yet. Please contact support." });
+    return;
+  }
+  const [settings] = await db.select().from(billingSettingsTable).where(eq(billingSettingsTable.id, 1));
+  if (!settings) {
+    res.status(409).json({ message: "Billing settings are not configured. Please contact support." });
+    return;
+  }
+  const pdf = await generateInvoicePdf({ settings, invoice });
+  res.type("application/pdf").set("Content-Disposition", `attachment; filename="${invoice.invoiceNumber}.pdf"`).send(pdf);
+});
 
 type BookingSnapshot = InvoiceBookingSnapshot & { status: string };
 
@@ -141,7 +178,7 @@ async function findBookingSnapshot(bookingId: number): Promise<BookingSnapshot |
     })
     .from(bookingsTable)
     .innerJoin(propertiesTable, eq(bookingsTable.propertyId, propertiesTable.id))
-    .innerJoin(roomsTable, eq(bookingsTable.roomId, roomsTable.id))
+    .leftJoin(roomsTable, eq(bookingsTable.roomId, roomsTable.id))
     .where(eq(bookingsTable.id, bookingId));
   if (!row) return null;
   return {
@@ -152,7 +189,7 @@ async function findBookingSnapshot(bookingId: number): Promise<BookingSnapshot |
     customerEmail: row.customerEmail,
     customerPhone: row.customerPhone,
     propertyName: row.propertyName,
-    roomName: row.roomName,
+    roomName: row.roomName ?? "Day Out",
     checkIn: row.checkIn,
     checkOut: row.checkOut,
     totalMinor: Math.round(row.totalAmount * 100),
@@ -213,7 +250,7 @@ async function loadInvoice(invoiceId: number): Promise<LoadedInvoice | null> {
       quantity: line.quantity,
       unitPriceMinor: line.unitPriceMinor,
       taxRateBps: line.taxRateBps,
-      subtotalMinor: line.quantity * line.unitPriceMinor,
+      subtotalMinor: line.totalMinor - line.taxMinor,
       taxMinor: line.taxMinor,
       totalMinor: line.totalMinor,
     })),
@@ -246,6 +283,8 @@ router.get("/admin/billing-settings", async (_req, res): Promise<void> => {
       businessName: settings.businessName,
       address: settings.address,
       taxRegistration: settings.taxRegistration,
+      gstRateBps: settings.gstRateBps,
+      gstMode: settings.gstMode,
       email: settings.email,
       phone: settings.phone,
       logoUrl: settings.logoUrl,
@@ -271,6 +310,8 @@ router.put("/admin/billing-settings", async (req, res): Promise<void> => {
       businessName: parsed.data.businessName.trim(),
       address: parsed.data.address.trim(),
       taxRegistration: parsed.data.taxRegistration?.trim() || null,
+      gstRateBps: parsed.data.gstRateBps ?? 0,
+      gstMode: parsed.data.gstMode ?? "exclusive",
       email: parsed.data.email?.trim() || null,
       phone: parsed.data.phone?.trim() || null,
       logoUrl: parsed.data.logoUrl || null,
@@ -281,6 +322,8 @@ router.put("/admin/billing-settings", async (req, res): Promise<void> => {
         businessName: parsed.data.businessName.trim(),
         address: parsed.data.address.trim(),
         taxRegistration: parsed.data.taxRegistration?.trim() || null,
+        ...(parsed.data.gstRateBps !== undefined ? { gstRateBps: parsed.data.gstRateBps } : {}),
+        ...(parsed.data.gstMode !== undefined ? { gstMode: parsed.data.gstMode } : {}),
         email: parsed.data.email === undefined ? undefined : parsed.data.email?.trim() || null,
         phone: parsed.data.phone === undefined ? undefined : parsed.data.phone?.trim() || null,
         logoUrl: parsed.data.logoUrl,
@@ -294,6 +337,8 @@ router.put("/admin/billing-settings", async (req, res): Promise<void> => {
       businessName: settings!.businessName,
       address: settings!.address,
       taxRegistration: settings!.taxRegistration,
+      gstRateBps: settings!.gstRateBps,
+      gstMode: settings!.gstMode,
       email: settings!.email,
       phone: settings!.phone,
       logoUrl: settings!.logoUrl,
@@ -339,7 +384,8 @@ router.post("/admin/invoices", async (req, res): Promise<void> => {
   }
   let totals;
   try {
-    totals = computeInvoiceTotals(data.lineItems);
+    const [settings] = await db.select().from(billingSettingsTable).where(eq(billingSettingsTable.id, 1));
+    totals = computeInvoiceTotals(data.lineItems, data.gstMode ?? settings?.gstMode ?? "exclusive");
   } catch (error) {
     res.status(400).json({ message: error instanceof Error ? error.message : "Invalid invoice totals" });
     return;
@@ -621,13 +667,18 @@ router.get("/admin/invoices/:id/email-status", async (req, res): Promise<void> =
     res.status(404).json({ message: "Invoice not found" });
     return;
   }
-  res.json(
-    GetInvoiceEmailStatusResponse.parse({
-      status: "unavailable",
-      configured: false,
-      message: "Invoice email delivery is unavailable until an email provider is configured.",
-    }),
-  );
+  const configured = !!(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASSWORD && process.env.SMTP_PORT === "465");
+  const [job] = invoice.bookingId ? await db.select().from(bookingEmailsTable).where(eq(bookingEmailsTable.bookingId, invoice.bookingId)) : [];
+  const status = job?.status ?? (configured ? "not_queued" : "unavailable");
+  const messages: Record<string, string> = {
+    unavailable: "SMTP is not configured.",
+    not_queued: "Automatic email applies to newly paid bookings. This invoice has not been queued; use the email draft for older or manual invoices.",
+    pending: "Booking confirmation and invoice are queued for email delivery.",
+    sent: "The mail server accepted the booking confirmation and invoice email. Inbox delivery is not guaranteed.",
+    failed: "Email delivery failed after retries. Check SMTP settings; use the email draft to send this invoice manually.",
+    skipped: "Confirmation email was skipped because this booking is no longer confirmed.",
+  };
+  res.json(GetInvoiceEmailStatusResponse.parse({ status, configured, message: messages[status] }));
 });
 
 router.post("/admin/invoices/:id/email", async (req, res): Promise<void> => {
@@ -642,7 +693,7 @@ router.post("/admin/invoices/:id/email", async (req, res): Promise<void> => {
     return;
   }
   res.status(503).json({
-    message: "Invoice email delivery is unavailable: configure an email provider before sending.",
+    message: "Manual invoice sending is not supported here. New paid bookings are emailed automatically; use the email draft for manual invoices.",
   });
 });
 

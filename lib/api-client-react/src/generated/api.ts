@@ -74,6 +74,7 @@ import type {
   CustomerPasswordLogin200,
   CustomerPasswordLoginBody,
   CustomerStatusInput,
+  DayOutQuote,
   Destination,
   DestinationInput,
   DownloadBookingInvoiceParams,
@@ -84,6 +85,7 @@ import type {
   GetAdminReportsParams,
   GetAvailabilityParams,
   GetBookingByIdParams,
+  GetDayOutQuoteParams,
   GetPartnerAlertsConfig200,
   GetWishlistParams,
   HealthStatus,
@@ -12220,6 +12222,84 @@ export function useGetProperty<TData = Awaited<ReturnType<typeof getProperty>>, 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetPropertyQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetDayOutQuoteUrl = (params: GetDayOutQuoteParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/day-out/quote?${stringifiedParams}` : `/api/day-out/quote`
+}
+
+export const getDayOutQuote = async (params: GetDayOutQuoteParams, options?: Parameters<typeof customFetch>[1]): Promise<DayOutQuote> => {
+
+  return customFetch<DayOutQuote>(getGetDayOutQuoteUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetDayOutQuoteQueryKey = (params?: GetDayOutQuoteParams,) => {
+    return [
+    `/api/day-out/quote`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetDayOutQuoteQueryOptions = <TData = Awaited<ReturnType<typeof getDayOutQuote>>, TError = ErrorType<void>>(params: GetDayOutQuoteParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDayOutQuote>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetDayOutQuoteQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getDayOutQuote>>> = ({ signal }) => getDayOutQuote(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDayOutQuote>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetDayOutQuoteQueryResult = NonNullable<Awaited<ReturnType<typeof getDayOutQuote>>>
+export type GetDayOutQuoteQueryError = ErrorType<void>
+
+
+
+export function useGetDayOutQuote<TData = Awaited<ReturnType<typeof getDayOutQuote>>, TError = ErrorType<void>>(
+ params: GetDayOutQuoteParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDayOutQuote>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetDayOutQuoteQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

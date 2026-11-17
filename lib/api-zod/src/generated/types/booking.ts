@@ -5,11 +5,13 @@
  * StayBest resort & hotel booking API
  * OpenAPI spec version: 0.1.0
  */
+import type { BookingBookingType } from './bookingBookingType';
 import type { BookingRefundSummary } from './bookingRefundSummary';
 import type { BookingStatus } from './bookingStatus';
 import type { PaymentSummary } from './paymentSummary';
 
 export interface Booking {
+  bookingType?: BookingBookingType;
   gstRateBps?: number;
   gstMode?: string;
   gstTaxMinor?: number;
@@ -20,7 +22,8 @@ export interface Booking {
   propertyName: string;
   propertyCity: string;
   propertyImageUrl: string;
-  roomId: number;
+  /** @nullable */
+  roomId: number | null;
   roomName: string;
   checkIn: string;
   checkOut: string;

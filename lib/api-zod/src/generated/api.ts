@@ -987,6 +987,7 @@ export const ListAdminBookingsQueryParams = zod.object({
 })
 
 export const ListAdminBookingsResponseItem = zod.object({
+  "bookingType": zod.enum(['room', 'day_out']).optional(),
   "gstRateBps": zod.int().optional(),
   "gstMode": zod.string().optional(),
   "gstTaxMinor": zod.int().optional(),
@@ -996,7 +997,7 @@ export const ListAdminBookingsResponseItem = zod.object({
   "propertyName": zod.string(),
   "propertyCity": zod.string(),
   "propertyImageUrl": zod.string(),
-  "roomId": zod.int(),
+  "roomId": zod.int().nullable(),
   "roomName": zod.string(),
   "checkIn": zod.string(),
   "checkOut": zod.string(),
@@ -1078,6 +1079,7 @@ export const UpdateBookingStatusBody = zod.object({
 })
 
 export const UpdateBookingStatusResponse = zod.object({
+  "bookingType": zod.enum(['room', 'day_out']).optional(),
   "gstRateBps": zod.int().optional(),
   "gstMode": zod.string().optional(),
   "gstTaxMinor": zod.int().optional(),
@@ -1087,7 +1089,7 @@ export const UpdateBookingStatusResponse = zod.object({
   "propertyName": zod.string(),
   "propertyCity": zod.string(),
   "propertyImageUrl": zod.string(),
-  "roomId": zod.int(),
+  "roomId": zod.int().nullable(),
   "roomName": zod.string(),
   "checkIn": zod.string(),
   "checkOut": zod.string(),
@@ -1164,6 +1166,7 @@ export const GetAdminBookingParams = zod.object({
 })
 
 export const GetAdminBookingResponse = zod.object({
+  "bookingType": zod.enum(['room', 'day_out']).optional(),
   "gstRateBps": zod.int().optional(),
   "gstMode": zod.string().optional(),
   "gstTaxMinor": zod.int().optional(),
@@ -1173,7 +1176,7 @@ export const GetAdminBookingResponse = zod.object({
   "propertyName": zod.string(),
   "propertyCity": zod.string(),
   "propertyImageUrl": zod.string(),
-  "roomId": zod.int(),
+  "roomId": zod.int().nullable(),
   "roomName": zod.string(),
   "checkIn": zod.string(),
   "checkOut": zod.string(),
@@ -3665,6 +3668,7 @@ export const SubmitAgentPropertyResponse = zod.object({
 
 
 export const ListAgentBookingsResponseItem = zod.object({
+  "bookingType": zod.enum(['room', 'day_out']).optional(),
   "gstRateBps": zod.int().optional(),
   "gstMode": zod.string().optional(),
   "gstTaxMinor": zod.int().optional(),
@@ -3674,7 +3678,7 @@ export const ListAgentBookingsResponseItem = zod.object({
   "propertyName": zod.string(),
   "propertyCity": zod.string(),
   "propertyImageUrl": zod.string(),
-  "roomId": zod.int(),
+  "roomId": zod.int().nullable(),
   "roomName": zod.string(),
   "checkIn": zod.string(),
   "checkOut": zod.string(),
@@ -5461,6 +5465,25 @@ export const GetPropertyResponse = zod.object({
 }))
 
 
+export const getDayOutQuoteQueryGuestsMax = 100;
+
+
+
+export const GetDayOutQuoteQueryParams = zod.object({
+  "propertyId": zod.coerce.number().int(),
+  "date": zod.coerce.string(),
+  "guests": zod.coerce.number().int().min(1).max(getDayOutQuoteQueryGuestsMax)
+})
+
+export const GetDayOutQuoteResponse = zod.object({
+  "pricePerPerson": zod.number(),
+  "baseTotalPrice": zod.number(),
+  "totalPrice": zod.number(),
+  "gstRateBps": zod.int(),
+  "gstMode": zod.string()
+})
+
+
 /**
  * @summary Room availability and pricing for a date range
  */
@@ -5577,6 +5600,7 @@ export const CreateBookingHeader = zod.object({
 
 export const createBookingBodyChildrenMin = 0;
 
+export const createBookingBodyRoomsCountMin = 0;
 
 
 export const createBookingBodyGuestEmailMin = 3;
@@ -5585,13 +5609,13 @@ export const createBookingBodyGuestEmailMin = 3;
 
 export const CreateBookingBody = zod.object({
   "propertyId": zod.int(),
-  "roomId": zod.int(),
+  "roomId": zod.int().nullish(),
   "checkIn": zod.string(),
   "checkOut": zod.string(),
   "guests": zod.int().min(1),
   "adults": zod.int().min(1).optional(),
   "children": zod.int().min(createBookingBodyChildrenMin).optional(),
-  "roomsCount": zod.int().min(1),
+  "roomsCount": zod.int().min(createBookingBodyRoomsCountMin),
   "guestName": zod.string().min(1),
   "guestEmail": zod.string().min(createBookingBodyGuestEmailMin),
   "guestPhone": zod.string().nullish(),
@@ -5600,6 +5624,7 @@ export const CreateBookingBody = zod.object({
 })
 
 export const CreateBookingResponse = zod.object({
+  "bookingType": zod.enum(['room', 'day_out']).optional(),
   "gstRateBps": zod.int().optional(),
   "gstMode": zod.string().optional(),
   "gstTaxMinor": zod.int().optional(),
@@ -5609,7 +5634,7 @@ export const CreateBookingResponse = zod.object({
   "propertyName": zod.string(),
   "propertyCity": zod.string(),
   "propertyImageUrl": zod.string(),
-  "roomId": zod.int(),
+  "roomId": zod.int().nullable(),
   "roomName": zod.string(),
   "checkIn": zod.string(),
   "checkOut": zod.string(),
@@ -5686,6 +5711,7 @@ export const ListBookingsQueryParams = zod.object({
 })
 
 export const ListBookingsResponseItem = zod.object({
+  "bookingType": zod.enum(['room', 'day_out']).optional(),
   "gstRateBps": zod.int().optional(),
   "gstMode": zod.string().optional(),
   "gstTaxMinor": zod.int().optional(),
@@ -5695,7 +5721,7 @@ export const ListBookingsResponseItem = zod.object({
   "propertyName": zod.string(),
   "propertyCity": zod.string(),
   "propertyImageUrl": zod.string(),
-  "roomId": zod.int(),
+  "roomId": zod.int().nullable(),
   "roomName": zod.string(),
   "checkIn": zod.string(),
   "checkOut": zod.string(),
@@ -5778,6 +5804,7 @@ export const GetBookingByIdQueryParams = zod.object({
 })
 
 export const GetBookingByIdResponse = zod.object({
+  "bookingType": zod.enum(['room', 'day_out']).optional(),
   "gstRateBps": zod.int().optional(),
   "gstMode": zod.string().optional(),
   "gstTaxMinor": zod.int().optional(),
@@ -5787,7 +5814,7 @@ export const GetBookingByIdResponse = zod.object({
   "propertyName": zod.string(),
   "propertyCity": zod.string(),
   "propertyImageUrl": zod.string(),
-  "roomId": zod.int(),
+  "roomId": zod.int().nullable(),
   "roomName": zod.string(),
   "checkIn": zod.string(),
   "checkOut": zod.string(),
@@ -5886,6 +5913,7 @@ export const CancelBookingBody = zod.object({
 })
 
 export const CancelBookingResponse = zod.object({
+  "bookingType": zod.enum(['room', 'day_out']).optional(),
   "gstRateBps": zod.int().optional(),
   "gstMode": zod.string().optional(),
   "gstTaxMinor": zod.int().optional(),
@@ -5895,7 +5923,7 @@ export const CancelBookingResponse = zod.object({
   "propertyName": zod.string(),
   "propertyCity": zod.string(),
   "propertyImageUrl": zod.string(),
-  "roomId": zod.int(),
+  "roomId": zod.int().nullable(),
   "roomName": zod.string(),
   "checkIn": zod.string(),
   "checkOut": zod.string(),
@@ -6540,6 +6568,7 @@ export const ListPartnerBookingsQueryParams = zod.object({
 })
 
 export const ListPartnerBookingsResponseItem = zod.object({
+  "bookingType": zod.enum(['room', 'day_out']).optional(),
   "gstRateBps": zod.int().optional(),
   "gstMode": zod.string().optional(),
   "gstTaxMinor": zod.int().optional(),
@@ -6549,7 +6578,7 @@ export const ListPartnerBookingsResponseItem = zod.object({
   "propertyName": zod.string(),
   "propertyCity": zod.string(),
   "propertyImageUrl": zod.string(),
-  "roomId": zod.int(),
+  "roomId": zod.int().nullable(),
   "roomName": zod.string(),
   "checkIn": zod.string(),
   "checkOut": zod.string(),
@@ -6751,6 +6780,7 @@ export const ListEmployeeBookingsQueryParams = zod.object({
 })
 
 export const ListEmployeeBookingsResponseItem = zod.object({
+  "bookingType": zod.enum(['room', 'day_out']).optional(),
   "gstRateBps": zod.int().optional(),
   "gstMode": zod.string().optional(),
   "gstTaxMinor": zod.int().optional(),
@@ -6760,7 +6790,7 @@ export const ListEmployeeBookingsResponseItem = zod.object({
   "propertyName": zod.string(),
   "propertyCity": zod.string(),
   "propertyImageUrl": zod.string(),
-  "roomId": zod.int(),
+  "roomId": zod.int().nullable(),
   "roomName": zod.string(),
   "checkIn": zod.string(),
   "checkOut": zod.string(),
@@ -6842,6 +6872,7 @@ export const EmployeeUpdateBookingStatusBody = zod.object({
 })
 
 export const EmployeeUpdateBookingStatusResponse = zod.object({
+  "bookingType": zod.enum(['room', 'day_out']).optional(),
   "gstRateBps": zod.int().optional(),
   "gstMode": zod.string().optional(),
   "gstTaxMinor": zod.int().optional(),
@@ -6851,7 +6882,7 @@ export const EmployeeUpdateBookingStatusResponse = zod.object({
   "propertyName": zod.string(),
   "propertyCity": zod.string(),
   "propertyImageUrl": zod.string(),
-  "roomId": zod.int(),
+  "roomId": zod.int().nullable(),
   "roomName": zod.string(),
   "checkIn": zod.string(),
   "checkOut": zod.string(),

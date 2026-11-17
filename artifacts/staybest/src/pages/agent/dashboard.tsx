@@ -35,7 +35,7 @@ export default function AgentDashboard() {
         <p className="text-muted-foreground">Here is a summary of your performance and earnings.</p>
         <p className="mt-2 text-sm text-muted-foreground">
           <Link href="/agent/properties" className="text-primary underline font-medium">
-            Download, sign and upload the hotel agreement in Agent Docs
+            Download, sign and upload your Agent Partnership Agreement
           </Link> — even before submitting a property.
         </p>
       </div>

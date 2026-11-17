@@ -1,6 +1,7 @@
 import { customFetch } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { AgentAgreementEditor } from "@/components/agent/AgentAgreementEditor";
 
 export type SignedAgreement = {
   id: string;
@@ -41,8 +42,9 @@ export function AdminAgreementDownloads({
     : `/api/admin/agent-agreement-documents/${id}/download`;
 
   return <div className="space-y-3 text-sm">
+    {role === "agent" && <AgentAgreementEditor key={ownerId} agentId={ownerId} />}
     {role === "agent" && <div className="flex flex-wrap items-center gap-2">
-      <span className="font-medium">Agent account · Agreement No. {ownerId}</span>
+      <span className="font-medium">Agent account · Sender ID / Agreement No. {ownerId}</span>
       <Button type="button" variant="outline" size="sm"
         data-testid={`download-agent-account-agreement-${ownerId}`}
         onClick={() => downloadAdminAgreement(

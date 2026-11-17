@@ -1,4 +1,5 @@
 import { useParams, Link, useLocation } from "wouter";
+import { isDayOutCategory } from "@workspace/api-client-react";
 import { Layout } from "@/components/layout/Layout";
 import { 
   useGetProperty, 
@@ -73,7 +74,7 @@ export default function PropertyDetail() {
   };
 
   const { data: property, isLoading } = useGetProperty(propertyId, {
-    query: { enabled: !!propertyId, queryKey: getGetPropertyQueryKey(propertyId) }
+    query: { enabled: !!propertyId, queryKey: getGetPropertyQueryKey(propertyId), refetchOnMount: "always", refetchOnWindowFocus: true }
   });
 
   // Client-side navigation retains the previous page's scroll position.
@@ -128,6 +129,10 @@ export default function PropertyDetail() {
 
   const handleCheckAvailability = (e: React.FormEvent) => {
     e.preventDefault();
+    if (property && isDayOutCategory(property.category)) {
+      setLocation(`/booking/${property.id}/day-out?checkIn=${checkIn}&checkOut=${checkIn}&adults=${adults}&children=${children}&guests=${guests}`);
+      return;
+    }
     if (new Date(checkOut) <= new Date(checkIn)) {
       toast.error("Check-out date must be after check-in date");
       return;
@@ -343,9 +348,10 @@ export default function PropertyDetail() {
               </p>
               <dl className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                 <div><dt className="text-muted-foreground">Category</dt><dd className="font-semibold text-secondary capitalize">{property.category}</dd></div>
+                {!!property.subcategories?.length && <div><dt className="text-muted-foreground">Subcategories</dt><dd className="font-semibold text-secondary">{property.subcategories.join(", ")}</dd></div>}
                 <div><dt className="text-muted-foreground">Rating</dt><dd className="font-semibold text-secondary">{property.rating.toFixed(1)} ({property.reviewCount})</dd></div>
                 <div><dt className="text-muted-foreground">Room types</dt><dd className="font-semibold text-secondary">{property.rooms.length}</dd></div>
-                <div><dt className="text-muted-foreground">From</dt><dd className="font-semibold text-secondary">{formatPrice(property.startingPrice)} / night</dd></div>
+                <div><dt className="text-muted-foreground">From</dt><dd className="font-semibold text-secondary">{formatPrice(property.startingPrice)} / {isDayOutCategory(property.category) ? 'person' : 'night'}</dd></div>
               </dl>
             </section>
 
@@ -404,7 +410,7 @@ export default function PropertyDetail() {
             </section>
 
             {/* Rooms List */}
-            <section id="rooms" className="scroll-mt-36">
+            {!isDayOutCategory(property.category) && <section id="rooms" className="scroll-mt-36">
               <h2 className="text-2xl font-serif font-bold text-secondary mb-6">Spaces</h2>
               
               {!isCheckingAvailability ? (
@@ -417,6 +423,7 @@ export default function PropertyDetail() {
                       <div className="p-6 flex-1 flex flex-col">
                         <div className="flex justify-between items-start mb-2">
                           <h3 className="text-xl font-bold text-secondary">{room.name}</h3>
+                          {!!room.subcategories?.length && <p className="text-sm text-muted-foreground">{room.subcategories.join(" · ")}</p>}
                           <div className="flex items-center text-sm text-muted-foreground">
                             <Users className="w-4 h-4 mr-1" /> Up to {room.maxGuests} guests
                           </div>
@@ -491,7 +498,7 @@ export default function PropertyDetail() {
                   )}
                 </div>
               )}
-            </section>
+            </section>}
 
             {/* Reviews */}
             <section id="reviews" className="pt-10 border-t scroll-mt-36">
@@ -631,14 +638,15 @@ export default function PropertyDetail() {
           <div className="lg:col-span-1">
             <div id="availability-form" className="sticky top-32 bg-white rounded-2xl shadow-xl border border-border p-6">
               <div className="mb-6">
+                <p className="text-xs text-muted-foreground mb-1">Starting from</p>
                 <span className="text-2xl font-bold text-secondary">{formatPrice(property.startingPrice)}</span>
-                <span className="text-muted-foreground text-sm"> / night</span>
+                <span className="text-muted-foreground text-sm">{isDayOutCategory(property.category) ? ' / person' : ' / night'}</span>
               </div>
 
               <form onSubmit={handleCheckAvailability} className="space-y-4">
                 <div className="grid grid-cols-2 gap-2 border rounded-xl overflow-hidden bg-muted/30">
                   <div className="p-3 border-r">
-                    <label className="text-xs font-bold text-secondary uppercase block mb-1">Check-in</label>
+                    <label className="text-xs font-bold text-secondary uppercase block mb-1">{isDayOutCategory(property.category) ? 'Visit date' : 'Check-in'}</label>
                     <input 
                       type="date" 
                       required
@@ -647,16 +655,16 @@ export default function PropertyDetail() {
                       className="w-full bg-transparent border-none p-0 text-sm outline-none focus:ring-0" 
                     />
                   </div>
-                  <div className="p-3">
+                  {!isDayOutCategory(property.category) && <div className="p-3">
                     <label className="text-xs font-bold text-secondary uppercase block mb-1">Check-out</label>
                     <input 
                       type="date" 
                       required
                       value={checkOut}
                       onChange={e => setCheckOut(e.target.value)}
-                      className="w-full bg-transparent border-none p-0 text-sm outline-none focus:ring-0" 
+                      className="w-full bg-transparent border-none p-0 text-sm outline-none focus:ring-0"
                     />
-                  </div>
+                  </div>}
                 </div>
                 
                 <div className="border rounded-xl p-3 bg-muted/30">
@@ -686,7 +694,7 @@ export default function PropertyDetail() {
                 </div>
 
                 <Button type="submit" size="lg" className="w-full text-base h-12 mt-4">
-                  Check Availability
+                  {isDayOutCategory(property.category) ? 'Book Day Out Today' : 'Check Availability'}
                 </Button>
               </form>
 

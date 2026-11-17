@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useGetBillingSettings } from "@workspace/api-client-react";
 import { Link, useLocation } from "wouter";
 import { ArrowLeft, Plus, Trash2, Save } from "lucide-react";
 import { AdminLayout } from "@/components/layout/AdminLayout";
@@ -21,7 +22,7 @@ const lineSchema = z.object({
   description: z.string().min(1, "Required"),
   quantity: z.coerce.number().min(1, "Must be at least 1"),
   unitPrice: z.coerce.number().min(0, "Must be positive"),
-  taxRatePercent: z.coerce.number().min(0, "Must be positive").optional(),
+  taxRatePercent: z.coerce.number().min(0, "Must be positive").max(100).optional(),
 });
 
 const schema = z.object({
@@ -38,6 +39,9 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 export default function AdminBillingNew() {
+  const { data: settings } = useGetBillingSettings();
+  const [gstMode, setGstMode] = useState<"inclusive" | "exclusive">("exclusive");
+  const defaultsApplied = useRef(false);
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const { data: bookings } = useListAdminBookings();
@@ -68,6 +72,7 @@ export default function AdminBillingNew() {
     
     const booking = bookings?.find(b => b.id.toString() === val);
     if (booking) {
+      setGstMode("inclusive"); // The saved booking total already contains its snapshotted GST.
       form.setValue("customerName", booking.guestName);
       form.setValue("customerEmail", booking.guestEmail);
       if (booking.guestPhone) form.setValue("customerPhone", booking.guestPhone);
@@ -79,21 +84,29 @@ export default function AdminBillingNew() {
           description: `Stay at ${booking.propertyName} (${booking.roomName})`,
           quantity: 1,
           unitPrice: booking.totalAmount, // rupees -> will be converted to minor on submit
-          taxRatePercent: 0,
+          taxRatePercent: (booking.gstRateBps ?? 0) / 100,
         });
       } else {
         append({
           description: `Stay at ${booking.propertyName} (${booking.roomName})`,
           quantity: 1,
           unitPrice: booking.totalAmount,
-          taxRatePercent: 0,
+          taxRatePercent: (booking.gstRateBps ?? 0) / 100,
         });
       }
     }
   };
 
+  useEffect(() => {
+    if (!settings || defaultsApplied.current) return;
+    defaultsApplied.current = true;
+    setGstMode(settings.gstMode ?? "exclusive");
+    if (!form.formState.isDirty) form.setValue("lineItems.0.taxRatePercent", (settings.gstRateBps ?? 0) / 100);
+  }, [settings, form]);
+
   const onSubmit = (data: FormValues) => {
     const payload = {
+      gstMode,
       bookingId: data.bookingId && data.bookingId !== "none" ? parseInt(data.bookingId, 10) : null,
       customerName: data.customerName,
       customerEmail: data.customerEmail,
@@ -105,7 +118,7 @@ export default function AdminBillingNew() {
         description: line.description,
         quantity: line.quantity,
         unitPriceMinor: parseINRToMinor(line.unitPrice),
-        taxRateBps: line.taxRatePercent ? parsePercentToBps(line.taxRatePercent) : undefined,
+        taxRateBps: line.taxRatePercent ? parsePercentToBps(line.taxRatePercent) : 0,
       })),
     };
 
@@ -130,6 +143,12 @@ export default function AdminBillingNew() {
         
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+            <label className="block text-sm font-medium">GST calculation
+              <select className="block w-full border rounded-md p-3 mt-2" value={gstMode} onChange={event => setGstMode(event.target.value as "inclusive" | "exclusive")}>
+                <option value="inclusive">Inclusive — entered prices include GST</option>
+                <option value="exclusive">Exclusive — add GST to entered prices</option>
+              </select>
+            </label>
             <div className="bg-white rounded-xl border p-6">
               <h2 className="text-lg font-serif font-bold text-secondary mb-4 pb-2 border-b">Customer Details</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -252,7 +271,7 @@ export default function AdminBillingNew() {
                   type="button" 
                   variant="outline" 
                   size="sm" 
-                  onClick={() => append({ description: "", quantity: 1, unitPrice: 0, taxRatePercent: 0 })}
+                  onClick={() => append({ description: "", quantity: 1, unitPrice: 0, taxRatePercent: (settings?.gstRateBps ?? 0) / 100 })}
                 >
                   <Plus className="w-4 h-4 mr-2" /> Add Line
                 </Button>

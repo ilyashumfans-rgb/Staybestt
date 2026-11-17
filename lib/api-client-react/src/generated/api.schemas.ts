@@ -1619,6 +1619,14 @@ export type PropertyDetail = PropertySummary & ({
   rooms: Room[];
 });
 
+export interface DayOutQuote {
+  pricePerPerson: number;
+  baseTotalPrice: number;
+  totalPrice: number;
+  gstRateBps: number;
+  gstMode: string;
+}
+
 export type RoomAvailabilityGstMode = typeof RoomAvailabilityGstMode[keyof typeof RoomAvailabilityGstMode];
 
 
@@ -1661,7 +1669,8 @@ export interface ReviewInput {
 
 export interface BookingInput {
   propertyId: number;
-  roomId: number;
+  /** @nullable */
+  roomId?: number | null;
   checkIn: string;
   checkOut: string;
   /** @minimum 1 */
@@ -1670,7 +1679,7 @@ export interface BookingInput {
   adults?: number;
   /** @minimum 0 */
   children?: number;
-  /** @minimum 1 */
+  /** @minimum 0 */
   roomsCount: number;
   /** @minLength 1 */
   guestName: string;
@@ -2079,6 +2088,14 @@ export interface BookingCancel {
   bookingRef: string | null;
 }
 
+export type BookingBookingType = typeof BookingBookingType[keyof typeof BookingBookingType];
+
+
+export const BookingBookingType = {
+  room: 'room',
+  day_out: 'day_out',
+} as const;
+
 export type BookingStatus = typeof BookingStatus[keyof typeof BookingStatus];
 
 
@@ -2134,6 +2151,7 @@ export interface PaymentSummary {
 }
 
 export interface Booking {
+  bookingType?: BookingBookingType;
   gstRateBps?: number;
   gstMode?: string;
   gstTaxMinor?: number;
@@ -2144,7 +2162,8 @@ export interface Booking {
   propertyName: string;
   propertyCity: string;
   propertyImageUrl: string;
-  roomId: number;
+  /** @nullable */
+  roomId: number | null;
   roomName: string;
   checkIn: string;
   checkOut: string;
@@ -3200,6 +3219,16 @@ longitude?: number;
  * @maximum 500
  */
 radiusKm?: number;
+};
+
+export type GetDayOutQuoteParams = {
+propertyId: number;
+date: string;
+/**
+ * @minimum 1
+ * @maximum 100
+ */
+guests: number;
 };
 
 export type GetAvailabilityParams = {

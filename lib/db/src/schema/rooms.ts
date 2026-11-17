@@ -16,6 +16,7 @@ export const roomsTable = pgTable("rooms", {
     .notNull()
     .references(() => propertiesTable.id),
   name: text("name").notNull(),
+  subcategories: text("subcategories").array().notNull().default([]),
   description: text("description").notNull(),
   imageUrl: text("image_url").notNull(),
   images: text("images").array().notNull().default([]),

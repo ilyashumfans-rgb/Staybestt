@@ -26,6 +26,7 @@ import {
   type SavedBooking,
 } from '@/utils/bookingDrafts';
 import { getPaymentReadiness, PREVIEW_LIVE_PAYMENT_MESSAGE } from '@/utils/paymentReadiness';
+import { useGetDayOutQuote, getGetDayOutQuoteQueryKey } from '@workspace/api-client-react';
 
 export default function ConfirmBookingScreen() {
   const colors = useColors();
@@ -35,6 +36,7 @@ export default function ConfirmBookingScreen() {
   const { user, isSignedIn } = useUser();
   
   const propertyId = Number(params.id);
+  const dayOut = params.dayOut === 'true';
   const roomId = Number(params.roomId);
   const checkIn = params.checkIn as string;
   const checkOut = params.checkOut as string;
@@ -55,16 +57,19 @@ export default function ConfirmBookingScreen() {
   const availabilityParams = { propertyId, checkIn, checkOut, guests, adults, children, roomsCount };
   const { data: availabilities, isLoading: loadingAvail } = useGetAvailability(
     availabilityParams,
-    { query: { enabled: !!propertyId, queryKey: getGetAvailabilityQueryKey(availabilityParams) } }
+    { query: { enabled: !!propertyId && !dayOut, queryKey: getGetAvailabilityQueryKey(availabilityParams) } }
   );
+  const dayParams = { propertyId, date: checkIn, guests };
+  const dayQuote = useGetDayOutQuote(dayParams, { query: { queryKey: getGetDayOutQuoteQueryKey(dayParams), enabled: dayOut, retry: false } });
 
   const roomAvailability = availabilities?.find(a => a.room.id === roomId);
+  const pricing = dayOut ? dayQuote.data : roomAvailability;
   const createBooking = useCreateBooking();
 
   const isFormValid = guestName.trim().length > 0 && guestEmail.trim().length > 3;
 
-  const roomTariff = (roomAvailability?.baseTotalPrice ?? roomAvailability?.totalPrice ?? 0) * roomsCount;
-  const gst = calculateGst(Math.round(roomTariff * 100), roomAvailability?.gstRateBps ?? 0, roomAvailability?.gstMode ?? "exclusive");
+  const roomTariff = (pricing?.baseTotalPrice ?? pricing?.totalPrice ?? 0) * (dayOut ? 1 : roomsCount);
+  const gst = calculateGst(Math.round(roomTariff * 100), pricing?.gstRateBps ?? 0, pricing?.gstMode ?? "exclusive");
   const totalPayable = gst.totalMinor / 100;
   const [savedBooking, setSavedBooking] = useState<SavedBooking | null>(null);
   const [draftLoaded, setDraftLoaded] = useState(false);
@@ -138,6 +143,9 @@ export default function ConfirmBookingScreen() {
     }
 
     setErrorMessage(null);
+    if (dayOut && (!dayQuote.data || dayQuote.isFetching || dayQuote.isError)) {
+      setErrorMessage('A valid Day Out price is required. Go back and choose a visit date.'); return;
+    }
     if (savedBooking) {
       openBooking(savedBooking);
       return;
@@ -160,7 +168,7 @@ export default function ConfirmBookingScreen() {
       {
         data: {
           propertyId,
-          roomId,
+          roomId: dayOut ? null : roomId,
           checkIn,
           checkOut,
           guests,
@@ -214,7 +222,7 @@ export default function ConfirmBookingScreen() {
     );
   };
 
-  if (loadingProp || loadingAvail) {
+  if (loadingProp || (!dayOut && loadingAvail) || (dayOut && dayQuote.isLoading)) {
     return (
       <ThemedView style={styles.container}>
         <View style={[styles.loadingCenter, { paddingTop: insets.top }]}>
@@ -248,23 +256,23 @@ export default function ConfirmBookingScreen() {
               
               <View style={styles.dateRow}>
                 <View style={{ flex: 1 }}>
-                  <ThemedText type="caption" color={colors.mutedForeground}>Check-in</ThemedText>
+                  <ThemedText type="caption" color={colors.mutedForeground}>{dayOut ? 'Visit date' : 'Check-in'}</ThemedText>
                   <ThemedText weight="bold" style={{ marginTop: 4 }}>
                     {checkIn ? format(parseISO(checkIn), 'dd MMM yyyy') : ''}
                   </ThemedText>
                 </View>
-                <View style={{ flex: 1, paddingLeft: 16 }}>
+                {!dayOut && <View style={{ flex: 1, paddingLeft: 16 }}>
                   <ThemedText type="caption" color={colors.mutedForeground}>Check-out</ThemedText>
                   <ThemedText weight="bold" style={{ marginTop: 4 }}>
                     {checkOut ? format(parseISO(checkOut), 'dd MMM yyyy') : ''}
                   </ThemedText>
-                </View>
+                </View>}
               </View>
 
               <View style={styles.guestRow}>
                 <View style={{ flex: 1 }}>
-                  <ThemedText type="caption" color={colors.mutedForeground}>Rooms</ThemedText>
-                  <ThemedText weight="bold" style={{ marginTop: 4 }}>{roomsCount} Room(s)</ThemedText>
+                  <ThemedText type="caption" color={colors.mutedForeground}>{dayOut ? 'Booking type' : 'Rooms'}</ThemedText>
+                  <ThemedText weight="bold" style={{ marginTop: 4 }}>{dayOut ? 'Day Out' : `${roomsCount} Room(s)`}</ThemedText>
                 </View>
                 <View style={{ flex: 1, paddingLeft: 16 }}>
                   <ThemedText type="caption" color={colors.mutedForeground}>Guests</ThemedText>
@@ -280,11 +288,11 @@ export default function ConfirmBookingScreen() {
             <ThemedText type="subtitle" weight="bold" style={styles.sectionTitle}>Price Details</ThemedText>
             <View style={[styles.priceCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <View style={styles.priceRowItem}>
-                <ThemedText color={colors.mutedForeground}>Room total</ThemedText>
+                <ThemedText color={colors.mutedForeground}>{dayOut ? `Day Out · ${guests} guests` : 'Room total'}</ThemedText>
                 <ThemedText weight="medium">₹{roomTariff.toLocaleString()}</ThemedText>
               </View>
               <View style={styles.priceRowItem}>
-                <ThemedText color={colors.mutedForeground}>GST {(roomAvailability?.gstRateBps ?? 0) / 100}% ({roomAvailability?.gstMode === "inclusive" ? "included" : "added"})</ThemedText>
+                <ThemedText color={colors.mutedForeground}>GST {(pricing?.gstRateBps ?? 0) / 100}% ({pricing?.gstMode === "inclusive" ? "included" : "added"})</ThemedText>
                 <ThemedText weight="medium">₹{(gst.taxMinor / 100).toLocaleString()}</ThemedText>
               </View>
               <View style={[styles.totalRow, { borderTopColor: colors.border }]}>
@@ -303,7 +311,7 @@ export default function ConfirmBookingScreen() {
               <View style={{ flex: 1 }}>
                 <ThemedText weight="semibold">Online payment required</ThemedText>
                 <ThemedText type="caption" color={colors.mutedForeground}>
-                  Your room will be held briefly while you complete secure payment.
+                  Your booking will be held briefly while you complete secure payment.
                 </ThemedText>
               </View>
             </View>

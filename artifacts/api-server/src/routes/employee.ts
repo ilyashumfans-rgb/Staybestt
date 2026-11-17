@@ -42,7 +42,7 @@ router.get("/employee/bookings", async (req, res): Promise<void> => {
     })
     .from(bookingsTable)
     .innerJoin(propertiesTable, eq(bookingsTable.propertyId, propertiesTable.id))
-    .innerJoin(roomsTable, eq(bookingsTable.roomId, roomsTable.id))
+    .leftJoin(roomsTable, eq(bookingsTable.roomId, roomsTable.id))
     .where(conditions.length ? and(...conditions) : undefined)
     .orderBy(desc(bookingsTable.createdAt));
   res.json(
@@ -136,8 +136,8 @@ router.post(
     const [room] = await db
       .select()
       .from(roomsTable)
-      .where(eq(roomsTable.id, updated.roomId));
-    if (!property || !room) {
+      .where(eq(roomsTable.id, updated.roomId ?? -1));
+    if (!property || (!room && updated.bookingType !== "day_out")) {
       res.status(500).json({ message: "Booking references missing data" });
       return;
     }

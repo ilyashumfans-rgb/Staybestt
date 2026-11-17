@@ -1,8 +1,9 @@
 import { useLocation, useParams, useSearch } from "wouter";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { 
   useGetProperty, 
+  useGetDayOutQuote, getGetDayOutQuoteQueryKey,
   useGetAvailability, getGetAvailabilityQueryKey, 
   useCreateBooking,
   useCreateRazorpayOrder,
@@ -27,6 +28,7 @@ import { ArrowLeft, Check, ShieldCheck, CreditCard, ChevronRight, AlertCircle, L
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatPrice } from "@/lib/utils";
+import { calculateGst } from "@workspace/api-client-react";
 import {
   getPaymentAllowed,
   getPaymentMessage,
@@ -46,7 +48,14 @@ import {
 export default function BookingFlow() {
   const params = useParams();
   const propertyId = Number(params.propertyId);
-  const roomId = Number(params.roomId);
+  const dayOut = params.roomId === "day-out";
+  const roomId = dayOut ? null : Number(params.roomId);
+
+  // Client-side navigation retains the property page's scroll position.
+  // Reset before paint so Book Now opens the booking form, not its footer.
+  useLayoutEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  }, [propertyId, roomId]);
   
   const searchString = useSearch();
   const searchParams = new URLSearchParams(searchString);
@@ -66,7 +75,7 @@ export default function BookingFlow() {
   const [guestEmail, setGuestEmail] = useState(email || "");
   const [guestPhone, setGuestPhone] = useState("");
   const [specialRequests, setSpecialRequests] = useState("");
-  const [roomsCount, setRoomsCount] = useState(1);
+  const [roomsCount, setRoomsCount] = useState(dayOut ? 0 : 1);
   const [couponInput, setCouponInput] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discountAmount: number } | null>(null);
   const [couponError, setCouponError] = useState<string | null>(null);
@@ -110,8 +119,10 @@ export default function BookingFlow() {
 
   const { data: availability, isLoading: isAvailLoading } = useGetAvailability(
     { propertyId, checkIn, checkOut, guests, adults, children, roomsCount },
-    { query: { enabled: !!propertyId && !!checkIn && !!checkOut, queryKey: getGetAvailabilityQueryKey({ propertyId, checkIn, checkOut, guests, adults, children, roomsCount }) } }
+    { query: { enabled: !dayOut && !!propertyId && !!checkIn && !!checkOut, queryKey: getGetAvailabilityQueryKey({ propertyId, checkIn, checkOut, guests, adults, children, roomsCount }) } }
   );
+  const dayParams = { propertyId, date: checkIn, guests };
+  const dayQuote = useGetDayOutQuote(dayParams, { query: { queryKey: getGetDayOutQuoteQueryKey(dayParams), enabled: dayOut, retry: false } });
 
   const createRazorpayOrder = useCreateRazorpayOrder();
   const verifyRazorpayPayment = useVerifyRazorpayPayment();
@@ -130,8 +141,9 @@ export default function BookingFlow() {
     },
   });
 
-  const roomAvailability = availability?.find(a => a.room.id === roomId);
-  const room = roomAvailability?.room;
+  const normalAvailability = availability?.find(a => a.room.id === roomId);
+  const roomAvailability = dayOut ? (dayQuote.data ? { ...dayQuote.data, availableRooms: 0 } : undefined) : normalAvailability;
+  const room = normalAvailability?.room;
 
   useEffect(() => () => {
     checkoutSessionRef.current?.cleanup();
@@ -161,7 +173,7 @@ export default function BookingFlow() {
     }
   }, [bookingIntentKey, createdBookingId]);
 
-  if (isPropertyLoading || isAvailLoading) {
+  if (isPropertyLoading || (!dayOut && isAvailLoading) || (dayOut && dayQuote.isLoading)) {
     return (
       <Layout>
         <div className="container mx-auto px-4 py-24 flex justify-center">
@@ -171,13 +183,13 @@ export default function BookingFlow() {
     );
   }
 
-  if (!property || !room || !roomAvailability) {
+  if (!property || (!dayOut && !room) || !roomAvailability || (dayOut && dayQuote.isError)) {
     return (
       <Layout>
         <div className="container mx-auto px-4 py-24 text-center">
           <AlertCircle className="w-12 h-12 text-destructive mx-auto mb-4" />
-          <h1 className="text-2xl font-bold mb-2">Room not available</h1>
-          <p className="text-muted-foreground mb-6">The selected room is no longer available for these dates.</p>
+          <h1 className="text-2xl font-bold mb-2">{dayOut ? 'Day Out unavailable' : 'Room not available'}</h1>
+          <p className="text-muted-foreground mb-6">{dayOut ? 'Check the visit date and per-person price on the property page.' : 'The selected room is no longer available for these dates.'}</p>
           <Button onClick={() => setLocation(`/property/${propertyId}`)}>Back to Property</Button>
         </div>
       </Layout>
@@ -186,11 +198,12 @@ export default function BookingFlow() {
 
   const nights = differenceInDays(new Date(checkOut), new Date(checkIn));
   // Server-computed stay total (includes seasonal pricing)
-  const subtotal = roomAvailability.totalPrice * roomsCount;
+  const subtotal = (roomAvailability.baseTotalPrice ?? roomAvailability.totalPrice) * (dayOut ? 1 : roomsCount);
   const discount = appliedCoupon ? Math.min(appliedCoupon.discountAmount, subtotal) : 0;
   // Do not invent tax or fee amounts in the browser. The booking response/order
   // remains authoritative; this is only the pre-booking stay estimate.
-  const estimatedTotal = Math.max(0, subtotal - discount);
+  const gst = calculateGst(Math.round(Math.max(0, subtotal - discount) * 100), roomAvailability.gstRateBps ?? 0, roomAvailability.gstMode ?? "exclusive");
+  const estimatedTotal = gst.totalMinor / 100;
   const displayedTotal = onlineOrderAmount ?? estimatedTotal;
   type PersistedBookingDraft = {
     id: number;
@@ -559,7 +572,7 @@ export default function BookingFlow() {
                         placeholder="+91 98765 43210" 
                       />
                     </div>
-                    <div>
+                    {!dayOut && <div>
                       <label className="text-sm font-bold text-secondary mb-1.5 block">Number of Rooms</label>
                       <select 
                         value={roomsCount}
@@ -570,9 +583,9 @@ export default function BookingFlow() {
                           <option key={i+1} value={i+1}>{i+1} {i+1 === 1 ? 'Room' : 'Rooms'}</option>
                         ))}
                       </select>
-                    </div>
+                    </div>}
                   </div>
-                  
+
                   <div>
                     <label className="text-sm font-bold text-secondary mb-1.5 block">Special Requests (Optional)</label>
                     <textarea 
@@ -580,7 +593,7 @@ export default function BookingFlow() {
                       value={specialRequests}
                       onChange={e => setSpecialRequests(e.target.value)}
                       className="w-full rounded-xl border border-input p-3 outline-none focus:ring-2 focus:ring-primary resize-none text-sm"
-                      placeholder="Late check-in, ground floor room, etc."
+                      placeholder={dayOut ? "Any requests for your Day Out visit" : "Late check-in, ground floor room, etc."}
                     />
                   </div>
                 </form>
@@ -689,22 +702,22 @@ export default function BookingFlow() {
                   <p className="text-sm text-muted-foreground mb-4">{property.area}, {property.city}</p>
                   
                   <div className="flex items-center gap-2 text-sm text-secondary bg-muted p-3 rounded-lg mb-6">
-                    <span className="font-bold">{room.name}</span>
+                    <span className="font-bold">{dayOut ? 'Day Out' : room?.name}</span>
                     <span className="text-muted-foreground">·</span>
                     <span>{adults} Adult{adults === 1 ? "" : "s"}{children > 0 ? `, ${children} Child${children === 1 ? "" : "ren"}` : ""}</span>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4 mb-6 py-4 border-y border-dashed">
                     <div>
-                      <p className="text-xs font-bold text-muted-foreground uppercase mb-1">Check-in</p>
+                      <p className="text-xs font-bold text-muted-foreground uppercase mb-1">{dayOut ? 'Visit date' : 'Check-in'}</p>
                       <p className="font-medium">{format(new Date(checkIn), "MMM d, yyyy")}</p>
-                      <p className="text-xs text-muted-foreground">After {property.checkInTime}</p>
+                      {!dayOut && <p className="text-xs text-muted-foreground">After {property.checkInTime}</p>}
                     </div>
-                    <div>
+                    {!dayOut && <div>
                       <p className="text-xs font-bold text-muted-foreground uppercase mb-1">Check-out</p>
                       <p className="font-medium">{format(new Date(checkOut), "MMM d, yyyy")}</p>
                       <p className="text-xs text-muted-foreground">Before {property.checkOutTime}</p>
-                    </div>
+                    </div>}
                   </div>
 
                   <div className="mb-6">
@@ -753,7 +766,7 @@ export default function BookingFlow() {
                   <div className="space-y-3 mb-6">
                     <h4 className="font-bold text-secondary">Price Summary</h4>
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">{formatPrice(roomAvailability.totalPrice)} for {nights} nights × {roomsCount} room(s)</span>
+                      <span className="text-muted-foreground">{dayOut ? `Day Out · ${guests} guests` : `${formatPrice(roomAvailability.baseTotalPrice ?? roomAvailability.totalPrice)} for ${nights} nights × ${roomsCount} room(s)`}</span>
                       <span className="font-medium">{formatPrice(subtotal)}</span>
                     </div>
                     {discount > 0 && appliedCoupon && (
@@ -763,7 +776,11 @@ export default function BookingFlow() {
                       </div>
                     )}
                      <div className="flex justify-between text-sm">
-                       <span className="text-muted-foreground">Stay total</span>
+                       <span className="text-muted-foreground">GST {(roomAvailability.gstRateBps ?? 0) / 100}% ({roomAvailability.gstMode === "inclusive" ? "included" : "added"})</span>
+                       <span className="font-medium">{formatPrice(gst.taxMinor / 100)}</span>
+                     </div>
+                     <div className="flex justify-between text-sm">
+                       <span className="text-muted-foreground">Stay total including GST</span>
                        <span className="font-medium">{formatPrice(estimatedTotal)}</span>
                      </div>
                   </div>

@@ -24,10 +24,10 @@ export async function lockBooking(tx: Transaction, bookingId: number): Promise<v
 
 export async function lockRoomAndBooking(
   tx: Transaction,
-  roomId: number,
+  roomId: number | null,
   bookingId: number,
 ): Promise<void> {
-  await lockRoom(tx, roomId);
+  if (roomId !== null) await lockRoom(tx, roomId);
   await lockBooking(tx, bookingId);
 }
 

@@ -1,5 +1,6 @@
 import { Router, type IRouter } from "express";
 import { and, eq, desc, inArray, sql, gte } from "drizzle-orm";
+import { validateSubcategories, validateRoomSubcategories, canChangePropertyCategory } from "../lib/subcategories";
 import {
   db,
   propertiesTable,
@@ -477,6 +478,9 @@ router.post("/partner/properties/register", async (req, res): Promise<void> => {
     res.status(400).json({ message: "Select an active property category" });
     return;
   }
+  if (!(await validateSubcategories(d.category, d.subcategories))) {
+    res.status(400).json({ message: "Select subcategories belonging to this category" }); return;
+  }
   if (d.pincode !== undefined && d.pincode !== "" && !/^\d{6}$/.test(d.pincode.trim())) {
     res.status(400).json({ message: "Pincode must be exactly 6 digits" });
     return;
@@ -491,6 +495,7 @@ router.post("/partner/properties/register", async (req, res): Promise<void> => {
     ownerId: req.currentUser!.id,
     name: d.name.trim(),
     category: d.category,
+    subcategories: d.subcategories ?? [],
     country: d.country.trim(),
     state: d.state.trim(),
     city: d.city.trim(),
@@ -549,6 +554,9 @@ router.put("/partner/properties/:id", async (req, res): Promise<void> => {
     return;
   }
   if (body.data.category !== property.category) {
+    if (!(await canChangePropertyCategory(property.id, body.data.category))) {
+      res.status(400).json({ message: "Clear incompatible room subcategories before changing category" }); return;
+    }
     const [activeCategory] = await db
       .select({ id: propertyCategoriesTable.id })
       .from(propertyCategoriesTable)
@@ -570,6 +578,9 @@ router.put("/partner/properties/:id", async (req, res): Promise<void> => {
     return;
   }
   const country = body.data.country?.trim() || property.country;
+  if (!(await validateSubcategories(body.data.category, body.data.subcategories ?? property.subcategories))) {
+    res.status(400).json({ message: "Select subcategories belonging to this category" }); return;
+  }
   const state = body.data.state?.trim() || property.state;
   const pincode = body.data.pincode?.trim() ?? property.pincode;
   const locationUnchanged =
@@ -632,7 +643,7 @@ router.get("/partner/bookings", async (req, res): Promise<void> => {
     })
     .from(bookingsTable)
     .innerJoin(propertiesTable, eq(bookingsTable.propertyId, propertiesTable.id))
-    .innerJoin(roomsTable, eq(bookingsTable.roomId, roomsTable.id))
+    .leftJoin(roomsTable, eq(bookingsTable.roomId, roomsTable.id))
     .where(and(...conditions))
     .orderBy(desc(bookingsTable.createdAt));
   res.json(
@@ -663,6 +674,9 @@ router.post("/partner/rooms", async (req, res): Promise<void> => {
     res.status(403).json({ message: "You do not own this property" });
     return;
   }
+  if (!(await validateRoomSubcategories(body.data.propertyId, body.data.subcategories))) {
+    res.status(400).json({ message: "Select subcategories belonging to this property's category" }); return;
+  }
   const [created] = await db.insert(roomsTable).values(body.data).returning();
   res.status(201).json(CreatePartnerRoomResponse.parse(toRoomDto(created)));
 });
@@ -687,6 +701,9 @@ router.put("/partner/rooms/:id", async (req, res): Promise<void> => {
     return;
   }
   // Rooms stay attached to their property in the partner flow
+  if (!(await validateRoomSubcategories(room.propertyId, body.data.subcategories ?? room.subcategories))) {
+    res.status(400).json({ message: "Select subcategories belonging to this property's category" }); return;
+  }
   const { propertyId: _ignored, ...updates } = body.data;
   const [updated] = await db
     .update(roomsTable)

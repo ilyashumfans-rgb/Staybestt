@@ -162,6 +162,7 @@ export async function repointUserReferences(tx: any, oldUserId: string, newUserI
   await tx.update(propertyDocumentUploadIntentsTable).set({ requestedBy: newUserId }).where(eq(propertyDocumentUploadIntentsTable.requestedBy, oldUserId));
   await tx.update(agentAgreementDocumentsTable).set({ agentId: newUserId }).where(eq(agentAgreementDocumentsTable.agentId, oldUserId));
   await tx.update(agentAgreementDocumentsTable).set({ reviewedBy: newUserId }).where(eq(agentAgreementDocumentsTable.reviewedBy, oldUserId));
+  await tx.execute(sql`update agent_agreement_profiles set agent_id=${newUserId} where agent_id=${oldUserId}`);
   // Marketing/account auxiliary FKs are retained as history when a provisioned
   // invitation is claimed. Tables are deliberately explicit to make schema
   // additions to this migration path auditable.

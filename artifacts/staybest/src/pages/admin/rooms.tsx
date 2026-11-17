@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { SubcategoryPicker } from "@/components/property/SubcategoryPicker";
 import { AmenityPicker } from "@/components/amenities/AmenityPicker";
 import { useParams, Link } from "wouter";
 import { AdminLayout } from "@/components/layout/AdminLayout";
@@ -41,17 +42,18 @@ export default function AdminRooms() {
 
   // Form State
   const [formData, setFormData] = useState({
-    name: "", description: "", imageUrl: "", maxGuests: "2", totalRooms: "5", pricePerNight: "", amenities: ""
+    name: "", description: "", imageUrl: "", maxGuests: "2", totalRooms: "5", pricePerNight: "", amenities: "", subcategories: [] as string[]
   });
 
   const resetForm = () => {
-    setFormData({ name: "", description: "", imageUrl: "", maxGuests: "2", totalRooms: "5", pricePerNight: "", amenities: "" });
+    setFormData({ name: "", description: "", imageUrl: "", maxGuests: "2", totalRooms: "5", pricePerNight: "", amenities: "", subcategories: [] });
     setEditingId(null);
   };
 
   const handleEdit = (room: any) => {
     setFormData({
       name: room.name,
+      subcategories: room.subcategories ?? [],
       description: room.description,
       imageUrl: room.imageUrl,
       maxGuests: String(room.maxGuests),
@@ -82,6 +84,7 @@ export default function AdminRooms() {
     
     const payload = {
       propertyId,
+      subcategories: formData.subcategories,
       name: formData.name,
       description: formData.description,
       imageUrl: formData.imageUrl,
@@ -134,6 +137,7 @@ export default function AdminRooms() {
               <DialogTitle>{editingId ? "Edit Room" : "Add New Room"}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4 py-4">
+              <SubcategoryPicker category={property?.category ?? ""} value={formData.subcategories} onChange={subcategories => setFormData(current => ({ ...current, subcategories }))} />
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
                   <label className="text-xs font-bold text-secondary mb-1 block">Room Name</label>

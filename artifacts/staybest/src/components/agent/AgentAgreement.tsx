@@ -91,10 +91,11 @@ export function AgentAgreement({ agentId, properties }: {
 
   return (
     <section className="bg-white rounded-xl border border-border p-5 mb-6 space-y-3" data-testid="agent-agreement">
-      <h2 className="font-bold text-secondary">Hotel enrollment agreement · Agent Docs</h2>
-      <p className="text-sm">Agreement No. <span className="font-mono">{agentId}</span></p>
+      <h2 className="font-bold text-secondary">Agent Partnership Agreement</h2>
+      <p className="text-sm">Sender ID / Agreement No. <span className="font-mono">{agentId}</span></p>
       <p className="text-sm text-muted-foreground">
-        Download the same hotel partner agreement, complete the blank legal and commercial terms, sign it, and upload the signed PDF.
+        Download your agreement with company details, your profile details and today's date filled automatically. Sign it and upload the signed PDF.
+        If any details are missing, ask admin to complete your agreement profile before downloading.
         You can save it to your account before submitting a property, or select one of your own submitted properties.
         The signed copy remains private for admin review.
       </p>
@@ -107,12 +108,12 @@ export function AgentAgreement({ agentId, properties }: {
         </select>
         <Button variant="outline" type="button" onClick={() => download(
           `/api/agent/agreement${propertyId === null ? "" : `?propertyId=${propertyId}`}`,
-          "agent-hotel-agreement.pdf",
+          "agent-partnership-agreement.pdf",
         )}>Download agreement PDF</Button>
       </div>
       <div className="flex flex-wrap gap-2 items-center">
         <Input className="max-w-sm" type="file" accept=".pdf,application/pdf"
-          aria-label="Signed agent hotel agreement PDF"
+          aria-label="Signed agent partnership agreement PDF"
           onChange={event => setFile(event.target.files?.[0] ?? null)} />
         <Button type="button" disabled={!file || busy} onClick={upload}>{busy ? "Uploading..." : "Upload signed PDF"}</Button>
       </div>

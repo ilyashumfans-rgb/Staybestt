@@ -25,7 +25,7 @@ vi.mock("@clerk/express", () => ({
     signInTokens: { createSignInToken: mocks.createSignInToken },
   },
 }));
-vi.mock("drizzle-orm", () => ({ eq: () => true, and: () => true }));
+vi.mock("drizzle-orm", () => ({ eq: () => true, and: () => true, or: () => true }));
 
 import router from "./customerLogin";
 

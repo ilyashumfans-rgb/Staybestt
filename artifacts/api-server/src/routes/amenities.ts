@@ -11,6 +11,7 @@ const defaults = [
   { name: "Living Room", items: [["TV", "tv"], ["Music System/Speaker", "music"]] },
   { name: "Common Amenities", items: [["Balcony/Terrace", "balcony"], ["Wi-Fi", "wifi"], ["AC", "ac"]] },
   { name: "Kitchen", items: [["Refrigerator", "refrigerator"], ["Water Purifier", "water"]] },
+  { name: "Preferences", items: [["Free Cancellation", "check"], ["Breakfast Included", "breakfast"], ["Pay at Property", "check"], ["Couple Friendly", "check"], ["Family Friendly", "check"], ["Pet Friendly", "check"]] },
 ];
 
 let seedPromise: Promise<void> | undefined;

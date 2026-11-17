@@ -19,8 +19,10 @@ import {
   partnerBookingAlertsTable,
   partnerPushSubscriptionsTable,
   partnerPushDeliveriesTable,
+  bookingEmailsTable,
 } from "@workspace/db";
 import { dispatchPartnerPush } from "./partnerPush";
+import { dispatchBookingEmails } from "./bookingEmails";
 import { currentBusinessDate } from "./billing";
 import { bookedRoomsCount } from "./availability";
 import { lockCoupon, lockRoomAndBooking } from "./advisoryLocks";
@@ -90,6 +92,7 @@ async function finalizeCapturedPendingBooking(tx: Tx, booking: any): Promise<any
     return expired ?? { ...booking, status: "expired" };
   }
 
+  if (booking.bookingType !== "day_out") {
   const [room] = await tx
     .select()
     .from(roomsTable)
@@ -124,6 +127,7 @@ async function finalizeCapturedPendingBooking(tx: Tx, booking: any): Promise<any
     return expired ?? { ...booking, status: "expired", paymentHoldExpiresAt: null };
   }
 
+  }
   // The nullable unique index makes this retry-safe even when two trusted
   // capture observations race one another.
   let bookingRef = makeBookingRef();
@@ -428,14 +432,18 @@ async function createBookingInvoicePayment(
       guestEmail: bookingsTable.guestEmail,
       guestPhone: bookingsTable.guestPhone,
       totalAmount: bookingsTable.totalAmount,
+      gstRateBps: bookingsTable.gstRateBps,
+      gstTaxMinor: bookingsTable.gstTaxMinor,
       propertyName: propertiesTable.name,
       roomName: roomsTable.name,
+      bookingType: bookingsTable.bookingType,
+      guests: bookingsTable.guests,
       checkIn: bookingsTable.checkIn,
       checkOut: bookingsTable.checkOut,
     })
     .from(bookingsTable)
     .innerJoin(propertiesTable, eq(bookingsTable.propertyId, propertiesTable.id))
-    .innerJoin(roomsTable, eq(bookingsTable.roomId, roomsTable.id))
+    .leftJoin(roomsTable, eq(bookingsTable.roomId, roomsTable.id))
     .where(eq(bookingsTable.id, bookingId));
   if (!booking) return { ok: false, reason: "mismatch" };
 
@@ -476,15 +484,15 @@ async function createBookingInvoicePayment(
         customerAddress: null,
         bookingSnapshotRef: booking.bookingRef,
         bookingSnapshotPropertyName: booking.propertyName,
-        bookingSnapshotRoomName: booking.roomName,
+        bookingSnapshotRoomName: booking.roomName ?? "Day Out",
         bookingSnapshotCheckIn: booking.checkIn,
         bookingSnapshotCheckOut: booking.checkOut,
         bookingSnapshotTotalMinor: amountMinor,
         issueDate: currentBusinessDate(),
         dueDate: currentBusinessDate(),
         currency: "INR",
-        subtotalMinor: amountMinor,
-        taxMinor: 0,
+        subtotalMinor: amountMinor - (booking.gstTaxMinor ?? 0),
+        taxMinor: booking.gstTaxMinor ?? 0,
         totalMinor: amountMinor,
       })
       .returning();
@@ -492,13 +500,13 @@ async function createBookingInvoicePayment(
     if (!invoice) return { ok: false, reason: "mismatch" };
     await tx.insert(invoiceLineItemsTable).values({
       invoiceId: invoice.id,
-      description: booking.bookingRef
+      description: booking.bookingType === "day_out" ? `Day Out · ${booking.guests} guests · ${booking.checkIn}` : booking.bookingRef
         ? `StayBest booking ${booking.bookingRef}`
         : `StayBest booking #${booking.id}`,
       quantity: 1,
-      unitPriceMinor: amountMinor,
-      taxRateBps: 0,
-      taxMinor: 0,
+      unitPriceMinor: amountMinor - (booking.gstTaxMinor ?? 0),
+      taxRateBps: booking.gstRateBps ?? 0,
+      taxMinor: booking.gstTaxMinor ?? 0,
       totalMinor: amountMinor,
     });
   }
@@ -740,6 +748,9 @@ export async function recordRazorpayPayment(input: {
         .set({ refundRequired: true, updatedAt: now })
         .where(eq(razorpayPaymentsTable.id, ledger.id));
     }
+    if (!refundRequired && booking.status === "pending_payment" && effectiveBooking.status === "confirmed") {
+      await tx.insert(bookingEmailsTable).values({ bookingId: input.bookingId }).onConflictDoNothing();
+    }
     await tx
       .update(razorpayOrdersTable)
       .set({ status: "paid", updatedAt: now })
@@ -749,6 +760,7 @@ export async function recordRazorpayPayment(input: {
 
   const summary = await loadPaymentSummary(input.bookingId);
   void dispatchPartnerPush();
+  void dispatchBookingEmails();
   if (!summary) throw new RazorpayLedgerError("missing_booking", "Booking not found");
   return summary;
 }

@@ -8,7 +8,8 @@
 
 export interface BookingInput {
   propertyId: number;
-  roomId: number;
+  /** @nullable */
+  roomId?: number | null;
   checkIn: string;
   checkOut: string;
   /** @minimum 1 */
@@ -17,7 +18,7 @@ export interface BookingInput {
   adults?: number;
   /** @minimum 0 */
   children?: number;
-  /** @minimum 1 */
+  /** @minimum 0 */
   roomsCount: number;
   /** @minLength 1 */
   guestName: string;

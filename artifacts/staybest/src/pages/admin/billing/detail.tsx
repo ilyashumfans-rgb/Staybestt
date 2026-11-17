@@ -36,7 +36,7 @@ export default function AdminBillingDetail({ params }: { params: { id: string } 
     query: { enabled: !isNaN(invoiceId), queryKey: getGetAdminInvoiceQueryKey(invoiceId) }
   });
   const { data: emailStatus } = useGetInvoiceEmailStatus(invoiceId, {
-    query: { enabled: !isNaN(invoiceId), queryKey: getGetInvoiceEmailStatusQueryKey(invoiceId) }
+    query: { enabled: !isNaN(invoiceId), queryKey: getGetInvoiceEmailStatusQueryKey(invoiceId), refetchInterval: query => query.state.data?.status === "pending" ? 15000 : false }
   });
 
   const recordPayment = useRecordInvoicePayment();
@@ -178,12 +178,12 @@ export default function AdminBillingDetail({ params }: { params: { id: string } 
           </div>
         </div>
 
-        {emailStatus?.status === 'unavailable' && (
+        {emailStatus && (
           <div className="bg-blue-50 border border-blue-100 text-blue-800 p-4 rounded-lg text-sm flex gap-3">
             <Mail className="w-5 h-5 shrink-0" />
             <div>
-              <p className="font-semibold mb-1">Email delivery is not configured</p>
-              <p>Please use "Open Email Draft" to draft an email in your default client, and manually attach the downloaded PDF before sending.</p>
+              <p className="font-semibold mb-1">Invoice email · {emailStatus.status.replace("_", " ")}</p>
+              <p>{emailStatus.message}</p>
             </div>
           </div>
         )}

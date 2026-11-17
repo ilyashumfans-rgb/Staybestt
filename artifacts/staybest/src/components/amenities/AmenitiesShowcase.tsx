@@ -5,9 +5,9 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { AmenityIcon } from "./AmenityIcon";
 
 export function useGroupedAmenities(selected: string[]) {
-  const { data, isLoading } = useGetAmenityCatalog();
+  const { data, isLoading, isError, refetch } = useGetAmenityCatalog();
   const groups = useMemo(() => groupSelectedAmenities(data?.categories ?? [], selected), [data, selected]);
-  return { groups, isLoading };
+  return { groups, isLoading, isError, refetch };
 }
 
 function Groups({ groups, cols }: { groups: AmenityGroup[]; cols: string }) {
@@ -28,16 +28,14 @@ function Groups({ groups, cols }: { groups: AmenityGroup[]; cols: string }) {
 }
 
 export function AmenitiesShowcase({ selected }: { selected: string[] }) {
-  const { groups, isLoading } = useGroupedAmenities(selected);
+  const { groups, isLoading, isError, refetch } = useGroupedAmenities(selected);
   const [open, setOpen] = useState(false);
   if (selected.length === 0) return <p className="text-muted-foreground text-sm">No amenities have been listed for this property.</p>;
   if (isLoading) return <div className="grid grid-cols-2 gap-4 md:grid-cols-3">{Array.from({ length: 6 }).map((_, i) => <div key={i} className="h-9 animate-pulse rounded-lg bg-muted" />)}</div>;
-  const preview = groups.flatMap(g => g.amenities).slice(0, 6);
+  if (isError) return <p className="text-sm text-destructive">Could not load amenity categories. <button type="button" className="underline" onClick={() => refetch()}>Retry</button></p>;
   return (
     <>
-      <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
-        {preview.map(a => <li key={`${a.id}-${a.name}`} className="flex items-center gap-3 text-sm text-secondary"><AmenityIcon icon={a.icon} /><span>{a.name}</span></li>)}
-      </ul>
+      <Groups groups={groups} cols="grid-cols-1 sm:grid-cols-2 md:grid-cols-3" />
       <Button type="button" variant="outline" className="mt-6" onClick={() => setOpen(true)} data-testid="button-view-all-amenities">View all amenities</Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent aria-describedby={undefined} className="max-h-[85dvh] w-[calc(100vw-1rem)] max-w-4xl overflow-y-auto rounded-xl bg-white p-6 sm:p-8">

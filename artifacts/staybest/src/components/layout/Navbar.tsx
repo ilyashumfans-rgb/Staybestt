@@ -7,6 +7,7 @@ import { useGuestIdentity } from "@/hooks/use-auth";
 import { useGetMe, getGetMeQueryKey, useListPropertyCategories } from "@workspace/api-client-react";
 import { BrandLogo } from "@/components/BrandLogo";
 import { NavbarBell } from "./NavbarBell";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -40,6 +41,13 @@ export function Navbar() {
   }, []);
 
   const isHome = location === "/";
+
+  useEffect(() => {
+    const desktop = window.matchMedia("(min-width: 768px)");
+    const closeOnDesktop = () => { if (desktop.matches) setMobileMenuOpen(false); };
+    desktop.addEventListener("change", closeOnDesktop);
+    return () => desktop.removeEventListener("change", closeOnDesktop);
+  }, []);
 
   const navClass = cn(
     "fixed top-0 left-0 right-0 z-50 transition-all duration-300 border-b",
@@ -177,6 +185,10 @@ export function Navbar() {
 
         {/* Mobile Toggle */}
         <button 
+          id="mobile-menu-toggle"
+          aria-label={mobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
+          aria-expanded={mobileMenuOpen}
+          aria-controls="mobile-navigation"
           className="md:hidden z-50 p-2"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
         >
@@ -189,8 +201,21 @@ export function Navbar() {
       </div>
 
       {/* Mobile Menu */}
-      {mobileMenuOpen && (
-        <div className="fixed inset-0 bg-white z-40 pt-24 px-6 flex flex-col gap-6 animate-in slide-in-from-top-4">
+      <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+        <SheetContent
+          id="mobile-navigation"
+          side="right"
+          aria-describedby={undefined}
+          onCloseAutoFocus={event => { event.preventDefault(); document.getElementById("mobile-menu-toggle")?.focus(); }}
+          className="z-[100] flex h-[100dvh] w-full flex-col gap-0 border-0 bg-white p-0 text-secondary sm:max-w-none [&>button]:flex [&>button]:h-11 [&>button]:w-11 [&>button]:items-center [&>button]:justify-center"
+        >
+          <SheetTitle className="sr-only">Navigation menu</SheetTitle>
+          <div className="shrink-0 border-b px-6 pb-5 pt-[max(1.25rem,env(safe-area-inset-top))] pr-16">
+            <Link href="/" onClick={() => setMobileMenuOpen(false)}>
+              <BrandLogo variant="horizontal" alt="StayBest — Choose your own Space" className="h-10" />
+            </Link>
+          </div>
+          <nav aria-label="Mobile navigation" className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 pt-6 pb-[max(2rem,env(safe-area-inset-bottom))] flex flex-col gap-6">
           <Link href="/search" className="text-xl font-serif text-secondary border-b pb-4" onClick={() => setMobileMenuOpen(false)}>
               Explore All
           </Link>
@@ -235,8 +260,9 @@ export function Navbar() {
               <User className="w-5 h-5" /> Sign In
             </Link>
           </Show>
-        </div>
-      )}
+          </nav>
+        </SheetContent>
+      </Sheet>
     </header>
   );
 }

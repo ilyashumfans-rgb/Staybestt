@@ -22,6 +22,10 @@ const schema = z.object({
   email: z.union([z.string().trim().email("Enter a valid email address").max(254), z.literal("")]),
   phone: z.string().trim().max(30),
   logoUrl: z.string(),
+  gstPercent: z.string().trim()
+    .regex(/^\d+(?:\.\d{1,2})?$/, "Enter a GST percentage with up to 2 decimal places")
+    .refine(value => Number(value) >= 0 && Number(value) <= 100, "GST must be between 0 and 100%"),
+  gstMode: z.enum(["inclusive", "exclusive"]),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -42,6 +46,8 @@ export default function AdminBillingSettings() {
       email: "",
       phone: "",
       logoUrl: "",
+      gstPercent: "0",
+      gstMode: "exclusive",
     },
   });
 
@@ -56,6 +62,8 @@ export default function AdminBillingSettings() {
         email: settings.email || "",
         phone: settings.phone || "",
         logoUrl: settings.logoUrl || "",
+        gstPercent: String((settings.gstRateBps ?? 0) / 100),
+        gstMode: settings.gstMode ?? "exclusive",
       });
       initialized.current = true;
     }
@@ -63,7 +71,8 @@ export default function AdminBillingSettings() {
 
   const onSubmit = (data: FormValues) => {
     if (uploading) return;
-    updateSettings.mutate({ data: { ...data, email: data.email || null, phone: data.phone || null, logoUrl: data.logoUrl || null } }, {
+    const { gstPercent, ...profile } = data;
+    updateSettings.mutate({ data: { ...profile, gstRateBps: Math.round(Number(gstPercent) * 100), email: data.email || null, phone: data.phone || null, logoUrl: data.logoUrl || null } }, {
       onSuccess: (updated) => {
         toast.success("Billing settings saved successfully");
         queryClient.setQueryData(getGetBillingSettingsQueryKey(), updated);
@@ -104,6 +113,23 @@ export default function AdminBillingSettings() {
           ) : (
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                <div className="rounded-xl border p-4 space-y-4">
+                  <h3 className="font-semibold">GST on room bookings</h3>
+                  <FormField control={form.control} name="gstPercent" render={({ field }) => <FormItem>
+                    <FormLabel>GST percentage (%)</FormLabel>
+                    <FormControl><Input {...field} type="text" inputMode="decimal" placeholder="e.g. 18"
+                      onFocus={event => event.currentTarget.select()}
+                      data-testid="input-gst-percentage" /></FormControl><FormMessage />
+                  </FormItem>} />
+                  <FormField control={form.control} name="gstMode" render={({ field }) => <FormItem>
+                    <FormLabel>Room price includes or excludes GST</FormLabel>
+                    <FormControl><select {...field} className="w-full border rounded-md p-3">
+                      <option value="inclusive">Inclusive — GST is included in the room price</option>
+                      <option value="exclusive">Exclusive — add GST to the room price</option>
+                    </select></FormControl><FormMessage />
+                  </FormItem>} />
+                  <p className="text-sm text-muted-foreground">Applies to new bookings after discounts and defaults on new invoices. Existing bookings and invoices stay unchanged. Set 0% for no GST.</p>
+                </div>
                 <CompanyLogoUpload value={form.watch("logoUrl")} onChange={value => form.setValue("logoUrl", value, { shouldDirty: true })} onBusy={setUploading} />
                 {(["email", "phone"] as const).map(name => (
                   <FormField key={name} control={form.control} name={name} render={({ field }) => (

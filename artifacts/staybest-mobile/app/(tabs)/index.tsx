@@ -15,6 +15,7 @@ import * as Haptics from 'expo-haptics';
 import { addDays, format, startOfDay } from 'date-fns';
 import { DateRangeSelector } from '@/components/DateRangeSelector';
 import { PropertyCard } from '@/components/PropertyCard';
+import { getListPropertyCategoriesQueryKey, useListPropertyCategories, isDayOutCategory } from '@workspace/api-client-react';
 
 const { width } = Dimensions.get('window');
 const bannerCardWidth = width - 40;
@@ -28,7 +29,14 @@ export default function ExploreScreen() {
   const [nearbyCoords, setNearbyCoords] = useState<{ latitude: number; longitude: number } | null>(null);
 
   // Search State
-  const [searchTab, setSearchTab] = useState('Stays');
+  const { data: categoryCatalog = [], isError: categoryError, refetch: reloadCategories } = useListPropertyCategories({ query: { queryKey: getListPropertyCategoriesQueryKey(), staleTime: 30000 } });
+  const categories = categoryCatalog.filter(category => category.active);
+  const [categorySlug, setCategorySlug] = useState('');
+  const selectedCategory = categories.find(category => category.slug === categorySlug) ?? categories[0];
+  const dayOut = isDayOutCategory(selectedCategory?.slug);
+  const [subcategory, setSubcategory] = useState('');
+  const selectedSubcategory = selectedCategory?.subcategories?.includes(subcategory) ? subcategory : '';
+  const selectCategory = (slug: string) => { setCategorySlug(slug); setSubcategory(''); };
   const [country, setCountry] = useState('');
   const [state, setState] = useState('');
   const [city, setCity] = useState('');
@@ -210,20 +218,14 @@ export default function ExploreScreen() {
 
   const handleManualSearch = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    if (!country && !city) return;
     router.push({
       pathname: '/list',
       params: {
         country,
         state,
         city,
-        category: searchTab === 'Stays'
-          ? 'stay,prime,luxury,budget,package'
-          : searchTab === 'Homes'
-            ? 'home'
-            : searchTab === 'Resorts'
-              ? 'resort'
-              : 'villa',
+        category: selectedCategory?.slug ?? '',
+        subcategory: selectedSubcategory,
         title: city || state || country,
         checkIn: format(checkIn, 'yyyy-MM-dd'),
         checkOut: format(checkOut, 'yyyy-MM-dd'),
@@ -389,29 +391,34 @@ export default function ExploreScreen() {
         <View style={styles.searchCard}>
           {/* Tabs */}
           <View style={styles.searchTabs}>
-            {[
-              { id: 'Stays', icon: 'bed' },
-              { id: 'Homes', icon: 'home' },
-              { id: 'Resorts', icon: 'umbrella' },
-              { id: 'Villas', icon: 'building' }
-            ].map(tab => (
+            {categories.map(tab => (
               <Pressable
                 key={tab.id}
-                style={[styles.searchTab, searchTab === tab.id && styles.searchTabActive]}
-                onPress={() => setSearchTab(tab.id)}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: selectedCategory?.id === tab.id }}
+                style={[styles.searchTab, selectedCategory?.id === tab.id && styles.searchTabActive]}
+                onPress={() => selectCategory(tab.slug)}
               >
                 <FontAwesome5
-                  name={tab.icon}
+                  name="building"
                   size={14}
-                  color={searchTab === tab.id ? '#ff6b00' : '#64748b'}
-                  solid={searchTab === tab.id}
+                  color={selectedCategory?.id === tab.id ? colors.primary : colors.mutedForeground}
+                  solid={selectedCategory?.id === tab.id}
                 />
-                <ThemedText style={[styles.searchTabText, searchTab === tab.id && styles.searchTabTextActive]}>
-                  {tab.id}
+                <ThemedText style={[styles.searchTabText, selectedCategory?.id === tab.id && styles.searchTabTextActive]}>
+                  {tab.name}
                 </ThemedText>
               </Pressable>
             ))}
           </View>
+          {categoryError && <Pressable onPress={() => reloadCategories()}><ThemedText>Could not load categories. Tap to retry.</ThemedText></Pressable>}
+          {!!selectedCategory?.subcategories?.length && <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ padding: 12, gap: 10 }}>
+            {selectedCategory.subcategories.map(name => <Pressable key={name} accessibilityRole="checkbox" accessibilityState={{ checked: selectedSubcategory === name }}
+              onPress={() => setSubcategory(selectedSubcategory === name ? '' : name)}
+              style={{ padding: 10, borderRadius: 18, borderWidth: 1, borderColor: selectedSubcategory === name ? colors.primary : colors.border }}>
+              <ThemedText color={selectedSubcategory === name ? colors.primary : colors.foreground}>{name}</ThemedText>
+            </Pressable>)}
+          </ScrollView>}
           <View style={styles.tabDivider} />
 
           {/* Location Input */}
@@ -435,6 +442,7 @@ export default function ExploreScreen() {
 
           {/* Dates & Guests */}
           <View style={styles.detailsRow}>
+            {!dayOut && <>
             <Pressable
               style={styles.detailCol}
               onPress={() => setDatePickerVisible(true)}
@@ -461,26 +469,26 @@ export default function ExploreScreen() {
 
             <View style={styles.vDivider} />
 
+            </>}
             <Pressable
               style={[styles.detailCol, { flex: 1.2 }]}
               onPress={() => setGuestPickerVisible(true)}
             >
               <Feather name="user" size={16} color="#64748b" />
               <View style={styles.detailTextWrapper}>
-                <ThemedText style={styles.inputLabel}>Guests & Rooms</ThemedText>
-                <ThemedText style={styles.inputValue} numberOfLines={1}>{guests} Guests, {rooms} Room</ThemedText>
+                <ThemedText style={styles.inputLabel}>{dayOut ? 'Guests' : 'Guests & Rooms'}</ThemedText>
+                <ThemedText style={styles.inputValue} numberOfLines={1}>{guests} Guests{!dayOut && `, ${rooms} Room`}</ThemedText>
               </View>
             </Pressable>
           </View>
 
           {/* Search Button */}
           <Pressable
-            style={[styles.searchButton, (!country) && { opacity: 0.6 }]}
+            style={styles.searchButton}
             onPress={handleManualSearch}
-            disabled={!country}
           >
             <Feather name="search" size={20} color="#fff" />
-            <ThemedText style={styles.searchButtonText}>Search {searchTab}</ThemedText>
+            <ThemedText style={styles.searchButtonText}>Search {selectedCategory?.name ?? 'Stays'}</ThemedText>
           </Pressable>
         </View>
 
@@ -536,25 +544,19 @@ export default function ExploreScreen() {
         )}
 
         {/* Categories */}
-        <View style={styles.categoriesRow}>
-          {[
-            { id: 'Hotels', icon: 'building', bg: '#e0f2fe', color: '#0369a1' },
-            { id: 'Homes', icon: 'home', bg: '#dcfce7', color: '#15803d' },
-            { id: 'Resorts', icon: 'umbrella-beach', bg: '#fef3c7', color: '#166534' },
-            { id: 'Apartments', icon: 'city', bg: '#f3e8ff', color: '#6b21a8' },
-            { id: 'Deals', icon: 'tag', bg: '#ffe4e6', color: '#9f1239' },
-          ].map(cat => (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoriesRow}>
+          {categories.map(cat => (
             <Pressable key={cat.id} style={styles.categoryItem} onPress={() => {
-              if (cat.id === 'Deals') return;
-              setSearchTab(cat.id === 'Apartments' ? 'Stays' : cat.id);
+              selectCategory(cat.slug);
+              router.push({ pathname: '/list', params: { category: cat.slug } });
             }}>
-              <View style={[styles.categoryIcon, { backgroundColor: cat.bg }]}>
-                <FontAwesome5 name={cat.icon} size={20} color="#0b1a30" />
+              <View style={[styles.categoryIcon, { backgroundColor: colors.card }]}>
+                <FontAwesome5 name="building" size={20} color={colors.primary} />
               </View>
-              <ThemedText style={styles.categoryLabel}>{cat.id}</ThemedText>
+              <ThemedText style={styles.categoryLabel}>{cat.name}</ThemedText>
             </Pressable>
           ))}
-        </View>
+        </ScrollView>
 
         {/* Sale Banners */}
         {eligibleBanners.length > 0 && (
@@ -830,7 +832,7 @@ export default function ExploreScreen() {
               </View>
             </View>
 
-            <View style={styles.guestRow}>
+            {!dayOut && <View style={styles.guestRow}>
               <View>
                 <ThemedText style={styles.guestRowTitle}>Rooms</ThemedText>
               </View>
@@ -843,7 +845,7 @@ export default function ExploreScreen() {
                   <Feather name="plus" size={16} color="#0b1a30" />
                 </Pressable>
               </View>
-            </View>
+            </View>}
 
             <Pressable style={styles.guestDoneBtn} onPress={() => setGuestPickerVisible(false)}>
               <ThemedText style={styles.guestDoneText}>Done</ThemedText>
@@ -982,11 +984,15 @@ const styles = StyleSheet.create({
   },
   searchTabs: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-start',
+    rowGap: 8,
     paddingHorizontal: 4,
     marginBottom: 12,
   },
   searchTab: {
+    width: '33.333%',
+    minHeight: 64,
     alignItems: 'center', gap: 6,
     paddingVertical: 8,
     paddingHorizontal: 8,
@@ -995,7 +1001,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 2, borderBottomColor: '#ff6b00',
   },
   searchTabText: {
-    fontSize: 13, color: '#64748b', fontWeight: '500',
+    fontSize: 13, color: '#64748b', fontWeight: '500', textAlign: 'center',
   },
   searchTabTextActive: {
     color: '#ff6b00', fontWeight: '700',

@@ -23,6 +23,7 @@ import { getProperty } from "@workspace/api-client-react";
 import { LocationFields } from "@/components/LocationFields";
 import { PropertyImageUploader } from "@/components/PropertyImageUploader";
 import { AmenityPicker } from "@/components/amenities/AmenityPicker";
+import { SubcategoryPicker } from "@/components/property/SubcategoryPicker";
 import {
   Dialog,
   DialogContent,
@@ -126,7 +127,7 @@ export default function AdminProperties() {
 
   // Form State
   const [formData, setFormData] = useState({
-    name: "", category: "stay", country: "", state: "", city: "", area: "", pincode: "", latitude: "", longitude: "", address: "", description: "",
+    name: "", category: "stay", subcategories: [] as string[], country: "", state: "", city: "", area: "", pincode: "", latitude: "", longitude: "", address: "", description: "",
     imageUrl: "", images: "", amenities: [] as string[], policies: "",
     checkInTime: "14:00", checkOutTime: "11:00", startingPrice: "", 
     freeCancellation: false, breakfastIncluded: false, featured: false, ownerId: ""
@@ -144,7 +145,7 @@ export default function AdminProperties() {
 
   const resetForm = () => {
     setFormData({
-      name: "", category: "stay", country: "", state: "", city: "", area: "", pincode: "", latitude: "", longitude: "", address: "", description: "",
+      name: "", category: "stay", subcategories: [], country: "", state: "", city: "", area: "", pincode: "", latitude: "", longitude: "", address: "", description: "",
       imageUrl: "", images: "", amenities: [] as string[], policies: "",
       checkInTime: "14:00", checkOutTime: "11:00", startingPrice: "", 
       freeCancellation: false, breakfastIncluded: false, featured: false, ownerId: ""
@@ -160,6 +161,7 @@ export default function AdminProperties() {
       setFormData({
         name: detail.name,
         category: detail.category,
+        subcategories: detail.subcategories ?? [],
         country: detail.country ?? "",
         state: detail.state ?? "",
         city: detail.city,
@@ -207,6 +209,7 @@ export default function AdminProperties() {
     const payload = {
       name: formData.name,
       category: formData.category,
+      subcategories: formData.subcategories,
       country: formData.country,
       state: formData.state,
       city: formData.city,
@@ -284,7 +287,7 @@ export default function AdminProperties() {
                 </div>
                 <div>
                   <label className="text-xs font-bold text-secondary mb-1 block">Category</label>
-                  <select required value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} className="w-full h-11 border border-input rounded-xl px-3 outline-none focus:ring-2 focus:ring-primary">
+                  <select required value={formData.category} onChange={e => setFormData({...formData, category: e.target.value, subcategories: []})} className="w-full h-11 border border-input rounded-xl px-3 outline-none focus:ring-2 focus:ring-primary">
                     {editingId && !propertyCategories?.some(category => category.slug === formData.category) && (
                       <option value={formData.category}>{formData.category} (legacy)</option>
                     )}
@@ -311,13 +314,14 @@ export default function AdminProperties() {
                   onMainChange={(imageUrl) => setFormData({ ...formData, imageUrl })}
                   onGalleryChange={(images) => setFormData({ ...formData, images })}
                 />
+                <SubcategoryPicker category={formData.category} value={formData.subcategories} onChange={subcategories => setFormData(current => ({ ...current, subcategories }))} />
                 <AmenityPicker allowCatalogAdd value={formData.amenities} onChange={(amenities) => setFormData((current) => ({ ...current, amenities }))} />
                 <div>
                   <label className="text-xs font-bold text-secondary mb-1 block">Policies (comma separated)</label>
                   <Input required value={formData.policies} onChange={e => setFormData({...formData, policies: e.target.value})} />
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-secondary mb-1 block">Starting Price (INR)</label>
+                  <label className="text-xs font-bold text-secondary mb-1 block">{formData.category.replace(/[\s_-]/g, "").toLowerCase() === "dayout" ? "Day Out price per person (INR)" : "Starting Price (INR)"}</label>
                   <Input type="number" required value={formData.startingPrice} onChange={e => setFormData({...formData, startingPrice: e.target.value})} />
                 </div>
                 <div>

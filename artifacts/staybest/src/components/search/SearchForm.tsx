@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useLocation } from "wouter";
+import { useSearch } from "wouter";
 import { Calendar, Loader2, LocateFixed, MapPin, Search, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,16 +7,9 @@ import { useListLocations } from "@workspace/api-client-react";
 import { toast } from "sonner";
 
 export function SearchForm({ compact = false }: { compact?: boolean }) {
-  const [currentLocation] = useLocation();
+  const search = useSearch();
   const { data: locations } = useListLocations();
-  const initialParams = useMemo(() => {
-    const queryIndex = currentLocation.indexOf("?");
-    return new URLSearchParams(
-      queryIndex >= 0
-        ? currentLocation.slice(queryIndex + 1)
-        : window.location.search.replace(/^\?/, ""),
-    );
-  }, [currentLocation]);
+  const initialParams = useMemo(() => new URLSearchParams(search), [search]);
   const [country, setCountry] = useState(initialParams.get("country") ?? "");
   const [state, setState] = useState(initialParams.get("state") ?? "");
   const [city, setCity] = useState(initialParams.get("city") ?? "");
@@ -105,7 +98,7 @@ export function SearchForm({ compact = false }: { compact?: boolean }) {
 
   if (compact) {
     return (
-      <form onSubmit={handleSubmit} className="flex flex-col md:flex-row gap-2 w-full">
+      <form onSubmit={handleSubmit} className="flex flex-col md:flex-row gap-2 w-full text-secondary">
         <LocationSelects
           country={country}
           state={state}

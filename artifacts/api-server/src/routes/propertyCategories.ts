@@ -13,10 +13,13 @@ import {
   UpdatePropertyCategoryResponse,
 } from "@workspace/api-zod";
 import { requireAdmin } from "./admin";
+import { ensureSubcategories, isValidSubcategorySelection } from "../lib/subcategories";
+import { roomsTable } from "@workspace/db";
 
 const router: IRouter = Router();
 
 async function listCategories(includeInactive: boolean) {
+  await ensureSubcategories();
   return db
     .select()
     .from(propertyCategoriesTable)
@@ -53,7 +56,7 @@ router.post("/admin/property-categories", async (req, res): Promise<void> => {
   try {
     const [created] = await db
       .insert(propertyCategoriesTable)
-      .values({ ...parsed.data, name })
+      .values({ ...parsed.data, name, subcategories: parsed.data.subcategories ?? [] })
       .returning();
     res.status(201).json(CreatePropertyCategoryResponse.parse(created!));
   } catch (error: any) {
@@ -79,6 +82,17 @@ router.put("/admin/property-categories/:id", async (req, res): Promise<void> => 
   if (!existing) {
     res.status(404).json({ message: "Property category not found" });
     return;
+  }
+  if (body.data.subcategories) {
+    const usedProperties = await db.select().from(propertiesTable).where(eq(propertiesTable.category, existing.slug));
+    const usedRooms = await db.select({ subcategories: roomsTable.subcategories }).from(roomsTable)
+      .innerJoin(propertiesTable, eq(propertiesTable.id, roomsTable.propertyId))
+      .where(eq(propertiesTable.category, existing.slug));
+    const used = [...new Set([...usedProperties, ...usedRooms].flatMap(row => row.subcategories))];
+    if (!isValidSubcategorySelection(used, body.data.subcategories)) {
+      res.status(409).json({ message: "Cannot remove or rename a subcategory used by a property or room. Clear those selections first." });
+      return;
+    }
   }
   if (existing.slug !== body.data.slug) {
     const [property] = await db

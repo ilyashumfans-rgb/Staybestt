@@ -4,7 +4,7 @@ import { Image } from 'expo-image';
 import { useColors } from '@/hooks/useColors';
 import { ThemedText } from './ThemedText';
 import { getImageUrl } from '@/utils/images';
-import { PropertySummary } from '@workspace/api-client-react';
+import { PropertySummary, isDayOutCategory } from '@workspace/api-client-react';
 import { Feather, FontAwesome } from '@expo/vector-icons';
 import { HeartButton } from './HeartButton';
 import { Link } from 'expo-router';
@@ -78,7 +78,7 @@ export function PropertyCard({ property, featured = false, fullWidth = false, co
           <View style={styles.footer}>
             <View style={styles.priceRow}>
               <ThemedText type="subtitle" weight="bold">₹{property.startingPrice.toLocaleString()}</ThemedText>
-              <ThemedText type="caption" color={colors.mutedForeground}> / night</ThemedText>
+              <ThemedText type="caption" color={colors.mutedForeground}>{isDayOutCategory(property.category) ? ' / person' : ' / night'}</ThemedText>
             </View>
             <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
               {property.freeCancellation && (

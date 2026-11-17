@@ -1,4 +1,5 @@
 import { Link } from "wouter";
+import { isDayOutCategory } from "@workspace/api-client-react";
 import { Star, MapPin, Heart } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -142,7 +143,7 @@ export function PropertyCard({ property, featured = false }: PropertyCardProps) 
               <p className="text-xs text-muted-foreground mb-0.5">Starting from</p>
               <p className="text-lg font-bold text-secondary">
                 {formatPrice(property.startingPrice)}
-                <span className="text-xs font-normal text-muted-foreground ml-1">/night</span>
+                <span className="text-xs font-normal text-muted-foreground ml-1">{isDayOutCategory(property.category) ? '/person' : '/night'}</span>
               </p>
             </div>
           </div>

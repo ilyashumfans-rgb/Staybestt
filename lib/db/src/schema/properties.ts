@@ -19,6 +19,7 @@ export const propertiesTable = pgTable("properties", {
   ownerId: text("owner_id").references(() => usersTable.id),
   name: text("name").notNull(),
   category: text("category").notNull(), // prime | luxury | budget | package
+  subcategories: text("subcategories").array().notNull().default([]),
   country: text("country"),
   state: text("state"),
   city: text("city").notNull(),

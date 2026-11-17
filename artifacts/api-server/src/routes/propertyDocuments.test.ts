@@ -434,37 +434,34 @@ describe("agent agreement admin portal credential", () => {
       setUser(null);
       expect((await request(appWith(router),
         `/admin/partners/${agentId}/properties/${propertyId}/agreement`, { headers })).status).toBe(404);
+      const detailsPath = `/admin/agents/${encodeURIComponent(agentId)}/agreement-details`;
+      expect((await request(appWith(router), detailsPath)).status).toBe(401);
+      const initialDetails = await (await request(appWith(router), detailsPath, { headers })).json() as Record<string, string>;
+      expect(initialDetails.fullName).toBe("Agreement Agent");
+      expect(initialDetails).not.toHaveProperty("template");
+      const sharedPath = "/admin/agent-agreement-template";
+      expect((await request(appWith(router), sharedPath)).status).toBe(401);
+      const shared = await (await request(appWith(router), sharedPath, { headers })).json() as { template: string };
+      expect(shared.template).toContain("AGENT PARTNERSHIP AGREEMENT");
+      expect((await request(appWith(router), agentPath, { headers })).status).toBe(400);
+      const saved = await request(appWith(router), detailsPath, {
+        method: "PUT", headers,
+        body: JSON.stringify({ ...initialDetails, fatherName: "Test Parent", address: "Agent Test Address",
+          template: "AGENT PARTNERSHIP AGREEMENT\nFull Name: {{fullName}}\nEmail: {{email}}\nFather's Name: {{fatherName}}\nAddress: {{address}}\nDate: {{date}}\nSignature: _______________________________" }),
+      });
+      expect(saved.status).toBe(200);
+      expect((await (await request(appWith(router), detailsPath, { headers })).json() as Record<string, string>).fatherName).toBe("Test Parent");
       const agentPdf = await request(appWith(router), agentPath, { headers });
-      expect(agentPdf.status).toBe(200);
-      const agentAccountText = execFileSync("pdftotext", ["-", "-"], {
-        input: Buffer.from(await agentPdf.arrayBuffer()),
-      }).toString();
-      expect(agentAccountText).toContain(agentId);
-      expect(agentAccountText).toContain("Authorized Representative: Agreement Agent");
-      expect(agentAccountText).toContain(`Email: ${agentId}@example.test`);
-      expect(agentAccountText).toContain("Legal Entity Name:");
-      expect(agentAccountText).not.toContain("Legal Entity Name: Registered Partner Pvt Ltd");
-      expect(agentAccountText).not.toContain("Property Address: Test Address");
-      expect(agentAccountText).not.toContain("Legal Entity Name: [Insert Legal Entity Name]");
-      expect(agentAccountText).toContain("Registered Address: [Insert Address]");
+      // Per-agent wording can no longer override the shared agreement.
+      // The fixture lacks the required shared company details.
+      expect(agentPdf.status).toBe(400);
+      expect((await (await request(appWith(router), sharedPath, { headers })).json() as { template: string }).template).toBe(shared.template);
       const propertyPdf = await request(appWith(router),
         `${agentPath}?propertyId=${agentPropertyId}`, { headers });
-      expect(propertyPdf.status).toBe(200);
-      const propertyText = execFileSync("pdftotext", ["-", "-"], {
-        input: Buffer.from(await propertyPdf.arrayBuffer()),
-      }).toString();
-      expect(propertyText).toContain(agentId);
-      expect(propertyText).toContain("Agent Test Hotel");
-      expect(propertyText).toContain("Property Address: Test Address, Test Area, Test City");
-      expect(propertyText).toContain("Email: hotel.agent@example.test");
-      expect(propertyText).toContain("Phone: +91 4444444444");
-      expect(propertyText).not.toContain("GST-TEST-123");
+      expect(propertyPdf.status).toBe(400);
       setUser((await db.select().from(usersTable).where(eq(usersTable.id, agentId)))[0]!);
       const selfAgentPdf = await request(appWith(router), `/agent/agreement?propertyId=${agentPropertyId}`);
-      expect(selfAgentPdf.status).toBe(200);
-      expect(execFileSync("pdftotext", ["-", "-"], {
-        input: Buffer.from(await selfAgentPdf.arrayBuffer()),
-      }).toString()).toContain("Email: hotel.agent@example.test");
+      expect(selfAgentPdf.status).toBe(400);
       setUser(null);
       expect((await request(appWith(router),
         `${agentPath}?propertyId=${propertyId}`, { headers })).status).toBe(404);

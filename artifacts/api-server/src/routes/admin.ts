@@ -4,6 +4,7 @@ import { repointUserReferences, resolveUser } from "../lib/auth";
 import { isValidTimeZone } from "../lib/cancellationPolicy";
 import { lockBooking, lockInvoice, lockRoomAndBooking } from "../lib/advisoryLocks";
 import { and, asc, eq, desc, sql, count, ilike, gte, lte, inArray } from "drizzle-orm";
+import { validateSubcategories, validateRoomSubcategories, canChangePropertyCategory } from "../lib/subcategories";
 import {
   db,
   cmsPagesTable,
@@ -173,6 +174,7 @@ import { currentBusinessDate, isInvoiceDate } from "../lib/billing";
 import { toBookingDto, toRoomDto, toPropertySummary } from "../lib/mappers";
 import { propertyLocationExistsInCatalog } from "../lib/locationCatalog";
 import { clerkClient } from "@clerk/express";
+import adminAgentLoginsRouter from "./adminAgentLogins";
 import { loadBookingRefundSummary } from "../lib/refunds";
 import { loadPaymentSummary } from "../lib/razorpay";
 
@@ -256,6 +258,7 @@ router.post("/admin/login", (req, res): void => {
 });
 
 router.use("/admin", requireAdmin);
+router.use("/admin", adminAgentLoginsRouter);
 
 // Credential-token administrators have no Clerk identity. Audit their action
 // with a null actor rather than attempting Clerk resolution after auth passed.
@@ -362,7 +365,7 @@ router.get("/admin/bookings", async (req, res): Promise<void> => {
     .select()
     .from(bookingsTable)
     .innerJoin(propertiesTable, eq(bookingsTable.propertyId, propertiesTable.id))
-    .innerJoin(roomsTable, eq(bookingsTable.roomId, roomsTable.id))
+    .leftJoin(roomsTable, eq(bookingsTable.roomId, roomsTable.id))
     .orderBy(desc(bookingsTable.createdAt));
 
   if (parsed.data.status) {
@@ -389,7 +392,7 @@ router.get("/admin/bookings/:id", async (req, res): Promise<void> => {
     .select()
     .from(bookingsTable)
     .innerJoin(propertiesTable, eq(bookingsTable.propertyId, propertiesTable.id))
-    .innerJoin(roomsTable, eq(bookingsTable.roomId, roomsTable.id))
+    .leftJoin(roomsTable, eq(bookingsTable.roomId, roomsTable.id))
     .where(eq(bookingsTable.id, params.data.id));
   if (!row) {
     res.status(404).json({ message: "Booking not found" });
@@ -690,7 +693,7 @@ router.post("/admin/bookings/:id/status", async (req, res): Promise<void> => {
     .select()
     .from(bookingsTable)
     .innerJoin(propertiesTable, eq(bookingsTable.propertyId, propertiesTable.id))
-    .innerJoin(roomsTable, eq(bookingsTable.roomId, roomsTable.id))
+    .leftJoin(roomsTable, eq(bookingsTable.roomId, roomsTable.id))
     .where(eq(bookingsTable.id, updated.id));
 
   res.json(
@@ -901,6 +904,9 @@ router.post("/admin/properties", async (req, res): Promise<void> => {
     return;
   }
   const d = parsed.data;
+  if (!(await validateSubcategories(d.category, d.subcategories))) {
+    res.status(400).json({ message: "Select subcategories belonging to this category" }); return;
+  }
   if (d.pincode !== undefined && d.pincode !== "" && !/^\d{6}$/.test(d.pincode.trim())) {
     res.status(400).json({ message: "Pincode must be exactly 6 digits" });
     return;
@@ -968,6 +974,10 @@ router.put("/admin/properties/:id", async (req, res): Promise<void> => {
     return;
   }
   const country = body.data.country?.trim() || existing.country;
+  if (!(await validateSubcategories(body.data.category, body.data.subcategories ?? existing.subcategories)) ||
+      !(await canChangePropertyCategory(existing.id, body.data.category))) {
+    res.status(400).json({ message: "Subcategories must match the category. Clear incompatible room selections before changing category." }); return;
+  }
   const state = body.data.state?.trim() || existing.state;
   const pincode = body.data.pincode?.trim() ?? existing.pincode;
   const locationInput = {
@@ -1052,6 +1062,9 @@ router.post("/admin/rooms", async (req, res): Promise<void> => {
     res.status(400).json({ message: parsed.error.message });
     return;
   }
+  if (!(await validateRoomSubcategories(parsed.data.propertyId, parsed.data.subcategories))) {
+    res.status(400).json({ message: "Select subcategories belonging to this property's category" }); return;
+  }
   const [property] = await db
     .select()
     .from(propertiesTable)
@@ -1081,6 +1094,11 @@ router.put("/admin/rooms/:id", async (req, res): Promise<void> => {
   if (!targetProperty) {
     res.status(400).json({ message: "Target property not found" });
     return;
+  }
+  const [existingRoom] = await db.select().from(roomsTable).where(eq(roomsTable.id, params.data.id));
+  if (!existingRoom) { res.status(404).json({ message: "Room not found" }); return; }
+  if (!(await validateRoomSubcategories(body.data.propertyId, body.data.subcategories ?? existingRoom.subcategories))) {
+    res.status(400).json({ message: "Select subcategories belonging to this property's category" }); return;
   }
   const [updated] = await db
     .update(roomsTable)
@@ -2565,7 +2583,7 @@ router.get("/admin/business-reports", async (req, res): Promise<void> => {
       .select()
       .from(bookingsTable)
       .innerJoin(propertiesTable, eq(bookingsTable.propertyId, propertiesTable.id))
-      .innerJoin(roomsTable, eq(bookingsTable.roomId, roomsTable.id))
+      .leftJoin(roomsTable, eq(bookingsTable.roomId, roomsTable.id))
       .orderBy(desc(bookingsTable.createdAt)),
     db
       .select()
@@ -2705,7 +2723,7 @@ router.get("/admin/business-reports", async (req, res): Promise<void> => {
     guestEmail: row.bookings.guestEmail,
     propertyId: row.properties.id,
     propertyName: row.properties.name,
-    roomName: row.rooms.name,
+    roomName: row.rooms?.name ?? "Day Out",
     checkIn: row.bookings.checkIn,
     checkOut: row.bookings.checkOut,
     roomsCount: row.bookings.roomsCount,

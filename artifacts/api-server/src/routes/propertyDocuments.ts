@@ -20,6 +20,8 @@ import {
 import {
   db,
   agentAgreementDocumentsTable,
+  agentAgreementProfilesTable,
+  agentAgreementTemplateTable,
   partnerProfilesTable,
   propertiesTable,
   propertyDocumentsTable,
@@ -35,6 +37,7 @@ import { ObjectNotFoundError, ObjectStorageService } from "../lib/objectStorage"
 import sharp from "sharp";
 import { PDFDict, PDFDocument, PDFName } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
+import { getAgentAgreementDetails, getSharedAgentAgreement, renderAgentAgreement, IncompleteAgentAgreement } from "../lib/agentAgreement";
 
 const router: IRouter = Router();
 const storage = new ObjectStorageService();
@@ -1346,15 +1349,50 @@ router.get("/agent/agreement", requireAgent, async (req, res) => {
     res.status(404).json({ message: "Submitted property not found" }); return;
   }
   try {
-    const bytes = await renderHotelAgreement(req.currentUser!.id, req.currentUser!, property);
+    const bytes = await renderAgentAgreement(req.currentUser!);
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", 'attachment; filename="agent-hotel-agreement.pdf"');
     res.setHeader("Cache-Control", "private, no-store");
     res.send(bytes);
   } catch (error) {
+    if (error instanceof IncompleteAgentAgreement) { res.status(400).json({ message: error.message }); return; }
     req.log.error({ err: error }, "Could not generate agent agreement");
     res.status(500).json({ message: "Agreement PDF is currently unavailable" });
   }
+});
+
+router.get("/admin/agent-agreement-template", requirePropertyDocumentAdmin, async (_req, res) => {
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json(await getSharedAgentAgreement());
+});
+
+router.put("/admin/agent-agreement-template", requirePropertyDocumentAdmin, async (req, res) => {
+  const parsed = z.SaveSharedAgentAgreementBody.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ message: "Invalid agreement template" }); return; }
+  await db.insert(agentAgreementTemplateTable).values({ id: 1, ...parsed.data })
+    .onConflictDoUpdate({ target: agentAgreementTemplateTable.id, set: { ...parsed.data, updatedAt: new Date() } });
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json(await getSharedAgentAgreement());
+});
+
+router.get("/admin/agents/:agentId/agreement-details", requirePropertyDocumentAdmin, async (req, res) => {
+  const [agent] = await db.select().from(usersTable)
+    .where(and(eq(usersTable.id, String(req.params.agentId)), eq(usersTable.role, "agent"))).limit(1);
+  if (!agent) { res.status(404).json({ message: "Agent not found" }); return; }
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json(await getAgentAgreementDetails(agent));
+});
+
+router.put("/admin/agents/:agentId/agreement-details", requirePropertyDocumentAdmin, async (req, res) => {
+  const parsed = z.SaveAgentAgreementDetailsBody.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ message: "Invalid agreement details" }); return; }
+  const [agent] = await db.select().from(usersTable)
+    .where(and(eq(usersTable.id, String(req.params.agentId)), eq(usersTable.role, "agent"))).limit(1);
+  if (!agent) { res.status(404).json({ message: "Agent not found" }); return; }
+  await db.insert(agentAgreementProfilesTable).values({ agentId: agent.id, details: parsed.data })
+    .onConflictDoUpdate({ target: agentAgreementProfilesTable.agentId, set: { details: parsed.data, updatedAt: new Date() } });
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json(await getAgentAgreementDetails(agent));
 });
 
 router.get("/admin/agents/:agentId/agreement", requirePropertyDocumentAdmin, async (req, res) => {
@@ -1377,12 +1415,13 @@ router.get("/admin/agents/:agentId/agreement", requirePropertyDocumentAdmin, asy
     property = owned;
   }
   try {
-    const bytes = await renderHotelAgreement(agentId, agent, property);
+    const bytes = await renderAgentAgreement(agent);
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", 'attachment; filename="agent-hotel-agreement.pdf"');
     res.setHeader("Cache-Control", "private, no-store");
     res.send(bytes);
   } catch (error) {
+    if (error instanceof IncompleteAgentAgreement) { res.status(400).json({ message: error.message }); return; }
     req.log.error({ err: error }, "Could not generate admin agent agreement");
     res.status(500).json({ message: "Agreement PDF is currently unavailable" });
   }

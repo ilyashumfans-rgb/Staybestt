@@ -8,6 +8,7 @@ import {
   razorpayMobileSessionsTable,
 } from "@workspace/db";
 import {
+  isDayOutCategory,
   CreateBookingBody,
   CreateBookingResponse,
   ListBookingsQueryParams,
@@ -26,6 +27,8 @@ import { checkCoupon } from "../lib/coupons";
 import { resolveUser } from "../lib/auth";
 import { toBookingDto, nightsBetween, isValidDateString } from "../lib/mappers";
 import { evaluateCancellation } from "../lib/cancellationPolicy";
+import { billingSettingsTable } from "@workspace/db";
+import { calculateGst } from "@workspace/api-zod";
 import { loadPaymentSummary } from "../lib/razorpay";
 import {
   getRazorpayConfig,
@@ -53,7 +56,7 @@ class IdempotencyConflictError extends Error {
 
 function bookingRequestFingerprint(data: {
   propertyId: number;
-  roomId: number;
+  roomId?: number | null;
   checkIn: string;
   checkOut: string;
   guests: number;
@@ -88,7 +91,7 @@ function bookingRequestFingerprint(data: {
 function createBookingResponseDto(
   booking: typeof bookingsTable.$inferSelect,
   property: typeof propertiesTable.$inferSelect,
-  room: typeof roomsTable.$inferSelect,
+  room: typeof roomsTable.$inferSelect | null | undefined,
   paymentAllowed: boolean,
 ) {
   return {
@@ -242,8 +245,8 @@ router.post("/bookings", async (req, res): Promise<void> => {
       const [existingRoom] = await db
         .select()
         .from(roomsTable)
-        .where(eq(roomsTable.id, existing.roomId));
-      if (!existingProperty || !existingRoom) {
+        .where(eq(roomsTable.id, existing.roomId ?? -1));
+      if (!existingProperty || (!existingRoom && existing.bookingType !== "day_out")) {
         res.status(500).json({ message: "Booking references missing data" });
         return;
       }
@@ -261,10 +264,6 @@ router.post("/bookings", async (req, res): Promise<void> => {
     return;
   }
   const nights = nightsBetween(data.checkIn, data.checkOut);
-  if (nights <= 0) {
-    res.status(400).json({ message: "Check-out must be after check-in" });
-    return;
-  }
 
   const [property] = await db
     .select()
@@ -274,23 +273,34 @@ router.post("/bookings", async (req, res): Promise<void> => {
     res.status(400).json({ message: "Property not found" });
     return;
   }
+  const dayOut = isDayOutCategory(property.category);
+  if (dayOut ? (nights !== 0 || data.roomId != null || data.roomsCount !== 0) : (nights <= 0 || data.roomId == null || data.roomsCount < 1)) {
+    res.status(400).json({ message: dayOut ? "Day Out bookings need one visit date and no rooms." : "Select a room and a check-out date after check-in." });
+    return;
+  }
+  if (dayOut && (!Number.isFinite(property.startingPrice) || property.startingPrice <= 0)) {
+    res.status(400).json({ message: "Day Out per-person pricing is not configured." }); return;
+  }
+  if (dayOut && data.checkIn < new Intl.DateTimeFormat("en-CA", { timeZone: property.timezone || "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date())) {
+    res.status(400).json({ message: "Choose today or a future visit date." }); return;
+  }
 
   const [room] = await db
     .select()
     .from(roomsTable)
     .where(
       and(
-        eq(roomsTable.id, data.roomId),
+        eq(roomsTable.id, data.roomId ?? -1),
         eq(roomsTable.propertyId, data.propertyId),
       ),
     );
-  if (!room) {
+  if (!room && !dayOut) {
     res.status(400).json({ message: "Room not found for this property" });
     return;
   }
   if (idempotencyKey) {
     const existing = await db.transaction(async (tx) => {
-      await lockRoom(tx, room.id);
+      if (room) await lockRoom(tx, room.id);
       const [row] = await tx
         .select()
         .from(bookingsTable)
@@ -316,8 +326,8 @@ router.post("/bookings", async (req, res): Promise<void> => {
       const [existingRoom] = await db
         .select()
         .from(roomsTable)
-        .where(eq(roomsTable.id, existing.roomId));
-      if (!existingProperty || !existingRoom) {
+        .where(eq(roomsTable.id, existing.roomId ?? -1));
+      if (!existingProperty || (!existingRoom && existing.bookingType !== "day_out")) {
         res.status(500).json({ message: "Booking references missing data" });
         return;
       }
@@ -329,18 +339,19 @@ router.post("/bookings", async (req, res): Promise<void> => {
       return;
     }
   }
-  if (room.isAvailable === false) {
+  if (room?.isAvailable === false) {
     res.status(400).json({ message: "This room is currently unavailable for booking" });
     return;
   }
   const adults = data.adults ?? data.guests;
   const children = data.children ?? 0;
   const totalGuests = adults + children;
+  if (dayOut && totalGuests > 100) { res.status(400).json({ message: "Day Out bookings support up to 100 guests." }); return; }
   if (adults < 1 || children < 0 || totalGuests !== data.guests) {
     res.status(400).json({ message: "Guest counts are invalid" });
     return;
   }
-  if (totalGuests > room.maxGuests * data.roomsCount) {
+  if (room && totalGuests > room.maxGuests * data.roomsCount) {
     res.status(400).json({
       message: `This selection allows up to ${room.maxGuests * data.roomsCount} guests`,
     });
@@ -349,10 +360,10 @@ router.post("/bookings", async (req, res): Promise<void> => {
 
   // Seasonal pricing: price each night individually (shared helper, also
   // used by /availability so the customer sees the same total).
-  const stayTotalPerRoom = await stayPriceForRoom(room.id, room.pricePerNight, data.checkIn, nights);
+  const stayTotalPerRoom = room ? await stayPriceForRoom(room.id, room.pricePerNight, data.checkIn, nights) : 0;
 
   // Re-validate the coupon server-side; never trust a client-computed discount.
-  const subtotal = stayTotalPerRoom * data.roomsCount;
+  const subtotal = dayOut ? property.startingPrice * totalGuests : stayTotalPerRoom * data.roomsCount;
   let couponCode: string | null = null;
   let discountAmount = 0;
   if (data.couponCode && data.couponCode.trim()) {
@@ -370,7 +381,7 @@ router.post("/bookings", async (req, res): Promise<void> => {
   try {
     created = await db.transaction(async (tx) => {
       // Lock existing bookings for this room to serialize concurrent booking attempts
-      await lockRoom(tx, room.id);
+      if (room) await lockRoom(tx, room.id);
       if (idempotencyKey) {
         const [existing] = await tx
           .select()
@@ -392,11 +403,13 @@ router.post("/bookings", async (req, res): Promise<void> => {
           return currentExisting;
         }
       }
-      const booked = await bookedRoomsCount(room.id, data.checkIn, data.checkOut, tx);
-      const available = room.totalRooms - booked;
-      if (available < data.roomsCount) {
-        return null;
+      if (room) {
+        const booked = await bookedRoomsCount(room.id, data.checkIn, data.checkOut, tx);
+        const available = room.totalRooms - booked;
+        if (available < data.roomsCount) return null;
       }
+      const [gstSettings] = await tx.select().from(billingSettingsTable).where(eq(billingSettingsTable.id, 1));
+      const gst = calculateGst(Math.round(Math.max(0, subtotal - discountAmount) * 100), gstSettings?.gstRateBps ?? 0, gstSettings?.gstMode ?? "exclusive");
       const [booking] = await tx
         .insert(bookingsTable)
         .values({
@@ -408,7 +421,8 @@ router.post("/bookings", async (req, res): Promise<void> => {
           // agent who created this booking can be attributed.
           agentId: authUser?.role === "agent" ? authUser.id : null,
           propertyId: data.propertyId,
-          roomId: data.roomId,
+          roomId: dayOut ? null : data.roomId,
+          bookingType: dayOut ? "day_out" : "room",
           checkIn: data.checkIn,
           checkOut: data.checkOut,
           guests: totalGuests,
@@ -420,7 +434,10 @@ router.post("/bookings", async (req, res): Promise<void> => {
           guestPhone: data.guestPhone ?? null,
           specialRequests: data.specialRequests ?? null,
           status: "pending_payment",
-          totalAmount: subtotal - discountAmount,
+          totalAmount: gst.totalMinor / 100,
+          gstRateBps: gstSettings?.gstRateBps ?? 0,
+          gstMode: gstSettings?.gstMode ?? "exclusive",
+          gstTaxMinor: gst.taxMinor,
           couponCode,
           discountAmount: discountAmount > 0 ? discountAmount : null,
           paymentHoldExpiresAt: new Date(Date.now() + 15 * 60 * 1000),
@@ -500,7 +517,7 @@ router.get("/bookings", async (req, res): Promise<void> => {
       propertiesTable,
       eq(bookingsTable.propertyId, propertiesTable.id),
     )
-    .innerJoin(roomsTable, eq(bookingsTable.roomId, roomsTable.id))
+    .leftJoin(roomsTable, eq(bookingsTable.roomId, roomsTable.id))
     .where(filter)
     .orderBy(desc(bookingsTable.createdAt));
 
@@ -536,7 +553,7 @@ router.get("/bookings/:id", async (req, res): Promise<void> => {
       propertiesTable,
       eq(bookingsTable.propertyId, propertiesTable.id),
     )
-    .innerJoin(roomsTable, eq(bookingsTable.roomId, roomsTable.id))
+    .leftJoin(roomsTable, eq(bookingsTable.roomId, roomsTable.id))
     .where(eq(bookingsTable.id, params.data.id));
 
   if (!row) {
@@ -595,7 +612,7 @@ router.post("/bookings/:id/cancel", async (req, res): Promise<void> => {
       propertiesTable,
       eq(bookingsTable.propertyId, propertiesTable.id),
     )
-    .innerJoin(roomsTable, eq(bookingsTable.roomId, roomsTable.id))
+    .leftJoin(roomsTable, eq(bookingsTable.roomId, roomsTable.id))
     .where(eq(bookingsTable.id, params.data.id));
 
   if (!row) {

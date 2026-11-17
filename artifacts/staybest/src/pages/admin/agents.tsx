@@ -1,3 +1,5 @@
+import { AgentLoginSettings } from "@/components/agent/AgentLoginSettings";
+import { SharedAgentAgreementEditor } from "@/components/agent/SharedAgentAgreementEditor";
 import { useState, useEffect } from "react";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import {
@@ -46,10 +48,12 @@ export default function AdminAgents() {
 
   return (
     <AdminLayout title={selectedAgentId ? "Agent Details" : "Agent Management"}>
+      <SharedAgentAgreementEditor />
       {selectedAgentId ? (
         <AgentDetail 
           agentId={selectedAgentId} 
           onBack={() => setSelectedAgentId(null)} 
+          onAccountChanged={setSelectedAgentId}
         />
       ) : (
         <AgentList onSelect={setSelectedAgentId} />
@@ -229,7 +233,7 @@ function MetricCard({ title, value, icon, highlight = false }: { title: string, 
   );
 }
 
-function AgentDetail({ agentId, onBack }: { agentId: string, onBack: () => void }) {
+function AgentDetail({ agentId, onBack, onAccountChanged }: { agentId: string, onBack: () => void, onAccountChanged: (id: string) => void }) {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('overview');
   const [signedAgreements, setSignedAgreements] = useState<(SignedAgreement & { agentId: string })[]>([]);
@@ -395,6 +399,11 @@ function AgentDetail({ agentId, onBack }: { agentId: string, onBack: () => void 
         <AdminAgreementDownloads ownerId={agentId} role="agent" properties={agent.properties}
           signed={signedAgreements} />
       </section>
+
+      <AgentLoginSettings key={agentId} agentId={agentId} onAccountChanged={id => {
+        queryClient.invalidateQueries({ queryKey: getListAdminAgentsQueryKey() });
+        onAccountChanged(id);
+      }} />
 
       <div className="border-b flex overflow-x-auto hide-scrollbar">
         {tabs.map(tab => (

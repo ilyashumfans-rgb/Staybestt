@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 // Never dispatch unrelated live notifications while testing payment fixtures.
 vi.mock("./partnerPush", () => ({ dispatchPartnerPush: vi.fn().mockResolvedValue(undefined) }));
+vi.mock("./bookingEmails", () => ({ dispatchBookingEmails: vi.fn().mockResolvedValue(undefined) }));
 import { eq, inArray } from "drizzle-orm";
 import {
   bookingsTable,
@@ -42,6 +43,7 @@ async function createPendingFixture(input: {
   key: string;
   holdExpiresAt: Date;
   amount?: number;
+  dayOut?: boolean;
 }) {
   const fixtureKey = `${runNamespace}-${input.key}`;
   const [booking] = await db
@@ -52,13 +54,14 @@ async function createPendingFixture(input: {
       idempotencyFingerprint: `fingerprint-${fixtureKey}`,
       userId: customerId,
       propertyId,
-      roomId,
+      roomId: input.dayOut ? null : roomId,
+      bookingType: input.dayOut ? "day_out" : "room",
       checkIn: "2030-04-01",
-      checkOut: "2030-04-03",
+      checkOut: input.dayOut ? "2030-04-01" : "2030-04-03",
       guests: 2,
       adults: 2,
       children: 0,
-      roomsCount: 1,
+      roomsCount: input.dayOut ? 0 : 1,
       guestName: "Pending Payment Customer",
       guestEmail: `${customerId}@example.test`,
       guestPhone: "9999999999",
@@ -283,6 +286,21 @@ run("pending Razorpay ledger integration", () => {
     expect(payments[0]).toMatchObject({ status: "captured", refundRequired: false });
     expect(ledgers).toHaveLength(1);
     expect(ledgers[0]).toMatchObject({ recipientUserId: partnerId, status: "pending" });
+  });
+  it("confirms a room-free Day Out and creates its invoice and owner alert", async () => {
+    const fixture = await createPendingFixture({ key: "day-out", dayOut: true, holdExpiresAt: new Date(Date.now() + 900000) });
+    const summary = await recordRazorpayPayment({
+      bookingId: fixture.booking.id, externalOrderId: fixture.externalOrderId,
+      externalPaymentId: `pay_day_out_${runNamespace}`, amountMinor: 20000, currency: "INR",
+      mode: "test", status: "captured", source: "checkout",
+    });
+    expect(summary.status).toBe("paid");
+    const [booking] = await db.select().from(bookingsTable).where(eq(bookingsTable.id, fixture.booking.id));
+    expect(booking).toMatchObject({ status: "confirmed", roomId: null, bookingType: "day_out" });
+    const [invoice] = await db.select().from(invoicesTable).where(eq(invoicesTable.bookingId, booking.id));
+    expect(invoice.bookingSnapshotRoomName).toBe("Day Out");
+    const alerts = await db.select().from(partnerBookingAlertsTable).where(eq(partnerBookingAlertsTable.bookingId, booking.id));
+    expect(alerts).toHaveLength(1);
   });
 
   it("keeps authorized and failed attempts pending without a reference, invoice, or commission", async () => {

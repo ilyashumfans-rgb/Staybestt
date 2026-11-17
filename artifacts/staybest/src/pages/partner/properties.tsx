@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { SubcategoryPicker } from "@/components/property/SubcategoryPicker";
 import { LocationFields } from "@/components/LocationFields";
 import { PartnerLayout } from "@/components/layout/PartnerLayout";
 import { PartnerAgreement } from "@/components/partner/PartnerAgreement";
@@ -56,7 +57,7 @@ export default function PartnerProperties() {
   const [registerOpen, setRegisterOpen] = useState(false);
   const [agreementPropertyId, setAgreementPropertyId] = useState<number | null>(null);
   const [regForm, setRegForm] = useState({
-    name: "", category: "", country: "", state: "", city: "", area: "", pincode: "", latitude: "", longitude: "", landmark: "", address: "",
+    name: "", category: "", subcategories: [] as string[], country: "", state: "", city: "", area: "", pincode: "", latitude: "", longitude: "", landmark: "", address: "",
     description: "", imageUrl: "", images: "", amenities: [] as string[], policies: "", startingPrice: "",
     freeCancellation: false, breakfastIncluded: false, contactPhone: "", contactEmail: ""
   });
@@ -71,6 +72,7 @@ export default function PartnerProperties() {
       data: {
         name: regForm.name.trim(),
         category: regForm.category,
+        subcategories: regForm.subcategories,
         country: regForm.country.trim(),
         state: regForm.state.trim(),
         city: regForm.city.trim(),
@@ -96,7 +98,7 @@ export default function PartnerProperties() {
         toast.success(res.message);
         setRegisterOpen(false);
         toast.info("Property registered. Open Property Docs / Agreement below to download, sign and upload it.");
-        setRegForm({ name: "", category: "", country: "", state: "", city: "", area: "", pincode: "", latitude: "", longitude: "", landmark: "", address: "", description: "", imageUrl: "", images: "", amenities: [], policies: "", startingPrice: "", freeCancellation: false, breakfastIncluded: false, contactPhone: "", contactEmail: "" });
+        setRegForm({ name: "", category: "", subcategories: [], country: "", state: "", city: "", area: "", pincode: "", latitude: "", longitude: "", landmark: "", address: "", description: "", imageUrl: "", images: "", amenities: [], policies: "", startingPrice: "", freeCancellation: false, breakfastIncluded: false, contactPhone: "", contactEmail: "" });
         queryClient.invalidateQueries({ queryKey: getListPartnerPropertiesQueryKey() });
       },
       onError: (err: any) => toast.error(err?.response?.data?.message || err.message || "Failed to submit"),
@@ -111,7 +113,7 @@ export default function PartnerProperties() {
 
   // Property Form State
   const [propFormData, setPropFormData] = useState({
-    name: "", category: "", country: "", state: "", city: "", area: "", pincode: "", latitude: "", longitude: "", address: "", description: "",
+    name: "", category: "", subcategories: [] as string[], country: "", state: "", city: "", area: "", pincode: "", latitude: "", longitude: "", address: "", description: "",
     imageUrl: "", images: "", amenities: [] as string[], policies: "",
     checkInTime: "14:00", checkOutTime: "11:00", startingPrice: "", 
     freeCancellation: false, breakfastIncluded: false, featured: false
@@ -129,7 +131,7 @@ export default function PartnerProperties() {
   const [roomDialogOpen, setRoomDialogOpen] = useState(false);
   const [editingRoomId, setEditingRoomId] = useState<number | null>(null);
   const [roomFormData, setRoomFormData] = useState({
-    name: "", description: "", imageUrl: "", images: "", maxGuests: "2", totalRooms: "5", pricePerNight: "", amenities: "", isAvailable: true
+    name: "", description: "", imageUrl: "", images: "", maxGuests: "2", totalRooms: "5", pricePerNight: "", amenities: "", subcategories: [] as string[], isAvailable: true
   });
   const [ratesRoom, setRatesRoom] = useState<{ id: number; name: string } | null>(null);
   const [rateForm, setRateForm] = useState({ name: "", startDate: "", endDate: "", pricePerNight: "" });
@@ -176,6 +178,7 @@ export default function PartnerProperties() {
     setPropFormData({
       name: fullPropData.name,
       category: fullPropData.category,
+      subcategories: fullPropData.subcategories ?? [],
       country: fullPropData.country ?? "",
       state: fullPropData.state ?? "",
       city: fullPropData.city,
@@ -210,6 +213,7 @@ export default function PartnerProperties() {
     const payload = {
       name: propFormData.name,
       category: propFormData.category,
+      subcategories: propFormData.subcategories,
       country: propFormData.country,
       state: propFormData.state,
       city: propFormData.city,
@@ -250,6 +254,7 @@ export default function PartnerProperties() {
     const payload = {
       propertyId: managingRoomsForPropId,
       name: roomFormData.name,
+      subcategories: roomFormData.subcategories,
       description: roomFormData.description,
       imageUrl: roomFormData.imageUrl,
       images: roomFormData.images.split(",").map(s => s.trim()).filter(Boolean),
@@ -318,7 +323,7 @@ export default function PartnerProperties() {
               </div>
               <div>
                 <label className="text-sm font-medium mb-1 block">Category *</label>
-                <select required value={regForm.category} onChange={e => setRegForm({...regForm, category: e.target.value})} className="w-full h-10 border border-input rounded-md px-3 bg-white">
+                <select required value={regForm.category} onChange={e => setRegForm({...regForm, category: e.target.value, subcategories: []})} className="w-full h-10 border border-input rounded-md px-3 bg-white">
                   <option value="" disabled>{categoriesLoading ? "Loading categories..." : "Select a category"}</option>
                   {propertyCategories?.map(category => (
                     <option key={category.id} value={category.slug}>{category.name}</option>
@@ -327,7 +332,7 @@ export default function PartnerProperties() {
                 {categoriesError && <p className="text-xs text-destructive mt-1">Could not load property categories. Please try again.</p>}
               </div>
               <div>
-                <label className="text-sm font-medium mb-1 block">Starting price (₹/night) *</label>
+                <label className="text-sm font-medium mb-1 block">{regForm.category.replace(/[\s_-]/g, "").toLowerCase() === "dayout" ? "Day Out price per person (₹) *" : "Starting price (₹/night) *"}</label>
                 <Input type="number" min="0" required value={regForm.startingPrice} onChange={e => setRegForm({...regForm, startingPrice: e.target.value})} />
               </div>
               <LocationFields
@@ -355,6 +360,7 @@ export default function PartnerProperties() {
                 <textarea required rows={3} className="w-full border border-input rounded-md p-3 text-sm" value={regForm.description} onChange={e => setRegForm({...regForm, description: e.target.value})} />
               </div>
               <AmenityPicker value={regForm.amenities} onChange={(amenities) => setRegForm((current) => ({ ...current, amenities }))} />
+              <SubcategoryPicker category={regForm.category} value={regForm.subcategories} onChange={subcategories => setRegForm(current => ({ ...current, subcategories }))} />
               <div>
                 <label className="text-sm font-medium mb-1 block">Policies (comma separated)</label>
                 <Input placeholder="No smoking, Pets allowed" value={regForm.policies} onChange={e => setRegForm({...regForm, policies: e.target.value})} />
@@ -470,7 +476,7 @@ export default function PartnerProperties() {
                 </div>
                 <div>
                   <label className="text-xs font-bold text-secondary mb-1 block">Category</label>
-                  <select required value={propFormData.category} onChange={e => setPropFormData({...propFormData, category: e.target.value})} className="w-full h-11 border border-input rounded-xl px-3 outline-none focus:ring-2 focus:ring-primary">
+                  <select required value={propFormData.category} onChange={e => setPropFormData({...propFormData, category: e.target.value, subcategories: []})} className="w-full h-11 border border-input rounded-xl px-3 outline-none focus:ring-2 focus:ring-primary">
                     {!propertyCategories?.some(category => category.slug === propFormData.category) && propFormData.category && (
                       <option value={propFormData.category}>{propFormData.category} (existing)</option>
                     )}
@@ -501,12 +507,13 @@ export default function PartnerProperties() {
                   getToken={getToken}
                 />
                 <AmenityPicker value={propFormData.amenities} onChange={(amenities) => setPropFormData((current) => ({ ...current, amenities }))} />
+                <SubcategoryPicker category={propFormData.category} value={propFormData.subcategories} onChange={subcategories => setPropFormData(current => ({ ...current, subcategories }))} />
                 <div>
                   <label className="text-xs font-bold text-secondary mb-1 block">Policies (comma separated)</label>
                   <Input required value={propFormData.policies} onChange={e => setPropFormData({...propFormData, policies: e.target.value})} />
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-secondary mb-1 block">Starting Price (INR)</label>
+                  <label className="text-xs font-bold text-secondary mb-1 block">{propFormData.category.replace(/[\s_-]/g, "").toLowerCase() === "dayout" ? "Day Out price per person (INR)" : "Starting Price (INR)"}</label>
                   <Input type="number" required value={propFormData.startingPrice} onChange={e => setPropFormData({...propFormData, startingPrice: e.target.value})} />
                 </div>
                 <div className="flex gap-4 items-end pb-2">
@@ -531,7 +538,7 @@ export default function PartnerProperties() {
               <DoorOpen className="w-5 h-5 text-primary" /> Rooms for {fullPropData?.name}
             </h3>
             <Button onClick={() => {
-              setRoomFormData({ name: "", description: "", imageUrl: "", images: "", maxGuests: "2", totalRooms: "5", pricePerNight: "", amenities: "", isAvailable: true });
+              setRoomFormData({ name: "", description: "", imageUrl: "", images: "", maxGuests: "2", totalRooms: "5", pricePerNight: "", amenities: "", subcategories: [], isAvailable: true });
               setEditingRoomId(null);
               setRoomDialogOpen(true);
             }}>
@@ -571,6 +578,7 @@ export default function PartnerProperties() {
                     <Button variant="outline" size="sm" className="flex-1" onClick={() => {
                       setRoomFormData({
                         name: room.name, description: room.description, imageUrl: room.imageUrl, images: room.images.join(", "),
+                        subcategories: room.subcategories ?? [],
                         maxGuests: String(room.maxGuests), totalRooms: String(room.totalRooms),
                         pricePerNight: String(room.pricePerNight), amenities: room.amenities.join(", "),
                         isAvailable: room.isAvailable !== false
@@ -601,6 +609,7 @@ export default function PartnerProperties() {
                 <DialogTitle>{editingRoomId ? "Edit Room" : "Add New Room"}</DialogTitle>
               </DialogHeader>
               <form onSubmit={handleRoomSubmit} className="space-y-4 py-4">
+                <SubcategoryPicker category={properties?.find(property => property.id === managingRoomsForPropId)?.category ?? ""} value={roomFormData.subcategories} onChange={subcategories => setRoomFormData(current => ({ ...current, subcategories }))} />
                 <div className="grid grid-cols-2 gap-4">
                   <div className="col-span-2">
                     <label className="text-xs font-bold text-secondary mb-1 block">Room Name</label>

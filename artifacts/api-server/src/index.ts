@@ -5,6 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { importPostalDirectory } from "@workspace/db";
 import { dispatchPartnerPush } from "./lib/partnerPush";
+import { dispatchBookingEmails } from "./lib/bookingEmails";
 
 const rawPort = process.env["PORT"];
 
@@ -56,6 +57,8 @@ async function start() {
     }
 
     logger.info({ port }, "Server listening");
+    void dispatchBookingEmails();
+    setInterval(() => { void dispatchBookingEmails(); }, 30_000).unref();
     void dispatchPartnerPush();
     setInterval(() => { void dispatchPartnerPush(); }, 30_000).unref();
     // Claiming each scheduled row atomically makes this safe with multiple API instances.

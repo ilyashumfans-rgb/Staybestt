@@ -1,7 +1,8 @@
 import { Router, type IRouter } from "express";
-import { eq, desc, asc } from "drizzle-orm";
+import { eq, desc, asc, and, sql } from "drizzle-orm";
 import { db, propertiesTable, roomsTable, locationsTable } from "@workspace/db";
 import {
+  isDayOutCategory,
   ListLocationsResponse,
   SearchPropertiesQueryParams,
   SearchPropertiesResponse,
@@ -10,6 +11,8 @@ import {
 } from "@workspace/api-zod";
 import { toPropertySummary, toRoomDto } from "../lib/mappers";
 import { resolveUser } from "../lib/auth";
+import { matchesAmenities } from "../lib/amenityMatching";
+import { startingRoomPrice } from "../lib/propertyPricing";
 
 const router: IRouter = Router();
 
@@ -45,6 +48,19 @@ router.get("/properties", async (req, res): Promise<void> => {
     .select()
     .from(propertiesTable)
     .where(eq(propertiesTable.status, "active"));
+
+  // Derive advertised rates before filtering/sorting, rather than using stale
+  // manually entered property prices after a room's rate has been edited.
+  const roomRates = await db.select({
+    propertyId: roomsTable.propertyId,
+    price: sql<number>`min(${roomsTable.pricePerNight})`,
+  }).from(roomsTable)
+    .where(and(eq(roomsTable.isAvailable, true), sql`${roomsTable.totalRooms} > 0`))
+    .groupBy(roomsTable.propertyId);
+  const prices = new Map(roomRates.map(room => [room.propertyId, Number(room.price)]));
+  rows = rows.map(property => ({
+    ...property, startingPrice: isDayOutCategory(property.category) ? property.startingPrice : prices.get(property.id) ?? property.startingPrice,
+  }));
 
   if (q.q) {
     const needle = q.q.toLowerCase();
@@ -91,6 +107,12 @@ router.get("/properties", async (req, res): Promise<void> => {
       rows = rows.filter((p) => cats.includes(p.category.toLowerCase()));
     }
   }
+  if (q.subcategory) {
+    const matchingRooms = await db.select({ propertyId: roomsTable.propertyId })
+      .from(roomsTable).where(and(eq(roomsTable.isAvailable, true), sql`${q.subcategory} = any(${roomsTable.subcategories})`));
+    const matchingIds = new Set(matchingRooms.map(room => room.propertyId));
+    rows = rows.filter(property => property.subcategories.includes(q.subcategory!) || matchingIds.has(property.id));
+  }
   if (q.minPrice != null) {
     rows = rows.filter((p) => p.startingPrice >= q.minPrice!);
   }
@@ -105,10 +127,7 @@ router.get("/properties", async (req, res): Promise<void> => {
       .split(",")
       .map((a) => a.trim().toLowerCase())
       .filter(Boolean);
-    rows = rows.filter((p) => {
-      const have = p.amenities.map((a) => a.toLowerCase());
-      return wanted.every((w) => have.includes(w));
-    });
+    rows = rows.filter((p) => matchesAmenities(p.amenities, wanted));
   }
   if (q.freeCancellation === true) {
     rows = rows.filter((p) => p.freeCancellation);
@@ -222,6 +241,7 @@ router.get("/properties/:id", async (req, res): Promise<void> => {
   res.json(
     GetPropertyResponse.parse({
       ...toPropertySummary(property),
+      startingPrice: isDayOutCategory(property.category) ? property.startingPrice : startingRoomPrice(property.startingPrice, rooms),
       ownerId: property.ownerId ?? null,
       address: property.address,
       images: property.images,

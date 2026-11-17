@@ -1,5 +1,5 @@
-import { useLocation } from "wouter";
-import { useState, useEffect } from "react";
+import { useLocation, useSearch } from "wouter";
+import { useState } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { PropertyCard } from "@/components/property/PropertyCard";
 import { useListPropertyCategories, useSearchProperties } from "@workspace/api-client-react";
@@ -8,12 +8,13 @@ import { Filter, SlidersHorizontal, Loader2, Search as SearchIcon, Map as MapIco
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SearchResultsMap } from "@/components/SearchResultsMap";
+import { AmenityFilters } from "@/components/search/AmenityFilters";
 
 export default function Search() {
-  const [location, setLocation] = useLocation();
-  const searchString = location.includes("?")
-    ? location.slice(location.indexOf("?") + 1)
-    : window.location.search.replace(/^\?/, "");
+  const [, setLocation] = useLocation();
+  // Filters change only the query string. Subscribe to it independently of
+  // the pathname so clicks and browser Back/Forward refresh the results.
+  const searchString = useSearch();
   const searchParams = new URLSearchParams(searchString);
   
   const q = searchParams.get("q") || undefined;
@@ -33,6 +34,8 @@ export default function Search() {
   const radiusKm = searchParams.get("radiusKm") ? Number(searchParams.get("radiusKm")) : undefined;
   const { data: propertyCategories = [] } = useListPropertyCategories();
   const selectedCategoryName = propertyCategories.find((item) => item.slug === category)?.name;
+  const subcategory = searchParams.get("subcategory") || undefined;
+  const subcategoryOptions = propertyCategories.find(item => item.slug === category)?.subcategories ?? [];
 
   const { data: properties, isLoading } = useSearchProperties({
     q,
@@ -40,6 +43,7 @@ export default function Search() {
     country,
     state,
     category,
+    subcategory,
     minPrice,
     maxPrice,
     minRating,
@@ -67,6 +71,7 @@ export default function Search() {
 
   const handleFilterToggle = (key: string, value: string | boolean) => {
     const params = new URLSearchParams(searchString);
+    if (key === "category") params.delete("subcategory");
     if (typeof value === 'boolean') {
       if (value) params.set(key, "true");
       else params.delete(key);
@@ -176,29 +181,14 @@ export default function Search() {
               <div className="w-full h-px bg-border" />
 
               {/* Preferences */}
-              <div>
-                <h4 className="font-semibold text-sm mb-3">Preferences</h4>
-                <div className="space-y-3">
-                  <label className="flex items-center gap-3 cursor-pointer">
-                    <input 
-                      type="checkbox" 
-                      checked={freeCancellation}
-                      onChange={(e) => handleFilterToggle('freeCancellation', e.target.checked)}
-                      className="w-4 h-4 text-primary rounded border-border focus:ring-primary"
-                    />
-                    <span className="text-sm">Free Cancellation</span>
-                  </label>
-                  <label className="flex items-center gap-3 cursor-pointer">
-                    <input 
-                      type="checkbox" 
-                      checked={breakfastIncluded}
-                      onChange={(e) => handleFilterToggle('breakfastIncluded', e.target.checked)}
-                      className="w-4 h-4 text-primary rounded border-border focus:ring-primary"
-                    />
-                    <span className="text-sm">Breakfast Included</span>
-                  </label>
-                </div>
-              </div>
+              {!!subcategoryOptions.length && <div>
+                <h4 className="font-semibold text-sm mb-3">{selectedCategoryName} subcategories</h4>
+                <div className="space-y-3">{subcategoryOptions.map(name => <label key={name} className="flex items-center gap-3 text-sm cursor-pointer">
+                  <input type="checkbox" checked={subcategory === name} onChange={() => handleFilterToggle("subcategory", name)} />{name}
+                </label>)}</div>
+                {subcategory && <button className="mt-3 text-xs underline" onClick={() => handleFilterToggle("subcategory", subcategory)}>Clear subcategory</button>}
+              </div>}
+              <AmenityFilters search={searchString} onChange={params => setLocation(`/search?${params.toString()}`)} />
 
               <div className="w-full h-px bg-border" />
               

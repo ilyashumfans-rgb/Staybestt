@@ -29,8 +29,8 @@ export const bookingsTable = pgTable("bookings", {
     .notNull()
     .references(() => propertiesTable.id),
   roomId: integer("room_id")
-    .notNull()
     .references(() => roomsTable.id),
+  bookingType: text("booking_type").notNull().default("room"),
   checkIn: date("check_in", { mode: "string" }).notNull(),
   checkOut: date("check_out", { mode: "string" }).notNull(),
   guests: integer("guests").notNull(),
@@ -43,6 +43,9 @@ export const bookingsTable = pgTable("bookings", {
   specialRequests: text("special_requests"),
   status: text("status").notNull().default("confirmed"), // pending_payment | confirmed | cancelled | completed | expired
   totalAmount: doublePrecision("total_amount").notNull(),
+  gstRateBps: integer("gst_rate_bps").notNull().default(0),
+  gstMode: text("gst_mode").notNull().default("exclusive"),
+  gstTaxMinor: integer("gst_tax_minor").notNull().default(0),
   couponCode: text("coupon_code"),
   discountAmount: doublePrecision("discount_amount"),
   paymentHoldExpiresAt: timestamp("payment_hold_expires_at", { withTimezone: true }),
